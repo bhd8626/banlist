@@ -82,3 +82,10 @@ Delay 30 ms
 MoveR 0 3
 Delay 30 ms
 Delay 25 ms
+PromacroRuDelay(33) if not IsMouseButtonPressed(1) then break end
+MoveMouseRelative(0, 11)
+PromacroRuDelay(32) if not IsMouseButtonPressed(1) then break end
+MoveMouseRelative(0, 11)
+PromacroRuDelay(32) if not IsMouseButtonPressed(1) then break end
+MoveMouseRelative(0, 11)
+PromacroRuDelay(31) if not IsMouseButtonPressed(1) then break end
