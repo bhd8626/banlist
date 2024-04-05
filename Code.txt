@@ -89,3 +89,7 @@ MoveMouseRelative(0, 11)
 PromacroRuDelay(32) if not IsMouseButtonPressed(1) then break end
 MoveMouseRelative(0, 11)
 PromacroRuDelay(31) if not IsMouseButtonPressed(1) then break end
+MoveR -1 3
+Delay 29 ms
+MoveR -1 3
+Delay 29 ms
