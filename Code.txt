@@ -93,3 +93,65 @@ MoveR -1 3
 Delay 29 ms
 MoveR -1 3
 Delay 29 ms
+local ASSAULT_RIFLE = nil
+local ASSAULT_RIFLE_HOLOSIGHT = false--true
+local ASSAULT_RIFLE_8X = false--true
+local ASSAULT_RIFLE_16X = false--true
+local ASSAULT_RIFLE_HANDMADE = false--true
+local ASSAULT_RIFLE_SILENCER = false--true
+local ASSAULT_RIFLE_MUZZLEBOOST = false--true
+local LR300 = nil
+local LR300_HOLOSIGHT = false--true
+local LR300_8X = false--true
+local LR300_16X = false--true
+local LR300_HANDMADESIGHT = false--true
+local LR300_SILENCER = false--true
+local LR300_MUZZLEBOOST = false--true
+local MP5 = nil
+local MP5_HOLOSIGHT = false--true
+local MP5_8X = false--true
+local MP5_16X = false--true
+local MP5_HANDMADE = false--true
+local MP5_SILENCER = false--true
+local MP5_MUZZLEBOOST = false--true
+local THOMPSON = nil
+local THOMPSON_HOLOSIGHT = false--true
+local THOMPSON_8X = false--true
+local THOMPSON_16X = false--true
+local THOMPSON_HANDMADE = false--true
+local THOMPSON_SILENCER = false--true
+local THOMPSON_MUZZLEBOOST = false--true
+local CUSTOM_SMG = nil
+local CUSTOM_SMG_HOLOSIGHT = false--true
+local CUSTOM_SMG_8X = false--true
+local CUSTOM_SMG_16X = false--true
+local CUSTOM_SMG_HANDMADE = false--true
+local CUSTOM_SMG_SILENCER = false--true
+local CUSTOM_SMG_MUZZLEBOOST = false--true
+local HMLMG = nil
+local HMLMG_HOLOSIGHT = false--true
+local HMLMG_8X = false--true
+local HMLMG_16X = false--true
+local HMLMG_HANDMADE = false--true
+local HMLMG_SILENCER = false--true
+local HMLMG_MUZZLEBOOST = false--true
+local M249 = nil
+local M249_HOLOSIGHT = false--true
+local M249_8X = false--true
+local M249_16X = false--true
+local M249_HANDMADE = false--true
+local M249_SILENCER = false--true
+local M249_MUZZLEBOOST = false--true
+screenMultiplier = -0.03*(CUSTOMIZABLE_SENS*3)*(CUSTOMIZABLE_FOV/100)
+StandMultiplier = 1.90
+StandMultiplier_HMLMG = 2
+StandMultiplier_M249 = 1.93
+	if (event == "MOUSE_BUTTON_PRESSED" and arg == ASSAULT_RIFLE) then
+		kickback = not kickback
+		gun = arg
+		if (kickback == false) then
+			OutputLogMessage("ASSAULT_RIFLE_MACRO-OFF\n2023/8/24\n1.5_beta\n-----------------------------------\n")
+		else
+			OutputLogMessage("ASSAULT_RIFLE_MACRO-ON\n2023/8/24\n1.5_beta\n-----------------------------------\n")
+			EnablePrimaryMouseButtonEvents(true)
+		end
