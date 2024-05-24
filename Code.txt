@@ -146,12 +146,12 @@ screenMultiplier = -0.03*(CUSTOMIZABLE_SENS*3)*(CUSTOMIZABLE_FOV/100)
 StandMultiplier = 1.90
 StandMultiplier_HMLMG = 2
 StandMultiplier_M249 = 1.93
-	if (event == "MOUSE_BUTTON_PRESSED" and arg == ASSAULT_RIFLE) then
-		kickback = not kickback
-		gun = arg
-		if (kickback == false) then
-			OutputLogMessage("ASSAULT_RIFLE_MACRO-OFF\n2023/8/24\n1.5_beta\n-----------------------------------\n")
-		else
-			OutputLogMessage("ASSAULT_RIFLE_MACRO-ON\n2023/8/24\n1.5_beta\n-----------------------------------\n")
-			EnablePrimaryMouseButtonEvents(true)
-		end
+if (event == "MOUSE_BUTTON_PRESSED" and arg == ASSAULT_RIFLE) then
+kickback = not kickback
+gun = arg
+if (kickback == false) then
+OutputLogMessage("ASSAULT_RIFLE_MACRO-OFF\n2023/8/24\n1.5_beta\n-----------------------------------\n")
+else
+OutputLogMessage("ASSAULT_RIFLE_MACRO-ON\n2023/8/24\n1.5_beta\n-----------------------------------\n")
+EnablePrimaryMouseButtonEvents(true)
+end
