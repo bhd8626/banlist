@@ -150,3 +150,9 @@ if (event == "MOUSE_BUTTON_PRESSED" and arg == ASSAULT_RIFLE) then
 if (kickback == false) then
 OutputLogMessage("ASSAULT_RIFLE_MACRO-OFF\n2023/8/24\n1.5_beta\n-----------------------------------\n")
 OutputLogMessage("ASSAULT_RIFLE_MACRO-ON\n2023/8/24\n1.5_beta\n-----------------------------------\n")
+akx1=1
+akx8=1
+akdun=1
+lrx1=1
+lrx8=1
+lrdun=1
