@@ -62,7 +62,6 @@ devcon remove *ROOT_HUB30*
 <Y>542</Y>
 <Delay>3</Delay>
 <Delay>4</Delay>
-<Type>3</Type>
 PromacroRuDelay(33) if not IsMouseButtonPressed(1) then break end
 MoveMouseRelative(0, 11)
 PromacroRuDelay(32) if not IsMouseButtonPressed(1) then break end
@@ -70,6 +69,7 @@ MoveMouseRelative(0, 11)
 PromacroRuDelay(32) if not IsMouseButtonPressed(1) then break end
 MoveMouseRelative(0, 11)
 PromacroRuDelay(31) if not IsMouseButtonPressed(1) then break end
+MoveR -1 3
 local ASSAULT_RIFLE = nil
 local ASSAULT_RIFLE_HOLOSIGHT = false--true
 local ASSAULT_RIFLE_8X = false--true
@@ -171,27 +171,39 @@ m92x1=1
 m92x8=1
 m92dun=1
 local a=NSB((function(b,c)function bxor(d,e)local f={{0,1},{1,0}}local g=1;local h=0;while d>0 or e>0 do h=h+f[d%2+1][e%2+1]*g
-Delay 1 ms
-Delay 2 ms
-Delay 3 ms
-Delay 4 ms
+MoveR 0 4
+MoveR 0 13
+MoveR 0 17
+MoveR 0 15
+MoveR 0 3
+MoveR 0 11
+MoveR 30 30
+MoveR 0 2
+MoveR 0 5
+MoveR -1 2
+MoveR -1 3
+MoveR 0 16
+MoveR -5 6
+MoveR -4 5
+MoveR -7 18
+MoveR -7 14
+MoveR -5 10
+MoveR -5 2
+MoveR -6 0
+MoveR -41 92
+MoveR 0 10
+MoveR 2 6
 Delay 5 ms
 Delay 6 ms
-Delay 7 ms
-Delay 8 ms
-Delay 9 ms
 Delay 10 ms
 Delay 11 ms
 Delay 12 ms
 Delay 13 ms
 Delay 14 ms
 Delay 15 ms
-Delay 16 ms
 Delay 17 ms
-Delay 18 ms
 Delay 19 ms
 Delay 20 ms
-Delay 21 ms
 Delay 22 ms
 Delay 23 ms
 Delay 24 ms
@@ -200,74 +212,10 @@ Delay 26 ms
 Delay 27 ms
 Delay 28 ms
 Delay 29 ms
-Delay 30 ms
-Delay 31 ms
-Delay 32 ms
-Delay 33 ms
-Delay 34 ms
-Delay 35 ms
-Delay 36 ms
-Delay 37 ms
-Delay 38 ms
-Delay 39 ms
-Delay 40 ms
-Delay 41 ms
-Delay 42 ms
-Delay 43 ms
-Delay 44 ms
 Delay 45 ms
-Delay 46 ms
-Delay 47 ms
-Delay 48 ms
-Delay 49 ms
-Delay 50 ms
-Delay 51 ms
-Delay 52 ms
-Delay 53 ms
-Delay 54 ms
-Delay 55 ms
 Delay 56 ms
-Delay 57 ms
-Delay 58 ms
-Delay 59 ms
-Delay 60 ms
-Delay 61 ms
-Delay 62 ms
-Delay 63 ms
 Delay 64 ms
-Delay 65 ms
-Delay 66 ms
-Delay 67 ms
-Delay 68 ms
-Delay 69 ms
-Delay 70 ms
-Delay 71 ms
-Delay 72 ms
-Delay 73 ms
-Delay 74 ms
-Delay 75 ms
-Delay 76 ms
-Delay 77 ms
-Delay 78 ms
-Delay 79 ms
-Delay 80 ms
-Delay 81 ms
-Delay 82 ms
-Delay 83 ms
-Delay 84 ms
-Delay 85 ms
-Delay 86 ms
-Delay 87 ms
-Delay 88 ms
-Delay 89 ms
-Delay 90 ms
-Delay 91 ms
-Delay 92 ms
-Delay 93 ms
-Delay 94 ms
-Delay 95 ms
-Delay 96 ms
-Delay 97 ms
-Delay 98 ms
-Delay 99 ms
 Delay 100 ms
+Delay 120 ms
+Delay 155 ms
+Delay 200 ms
