@@ -148,11 +148,49 @@ StandMultiplier_HMLMG = 2
 StandMultiplier_M249 = 1.93
 if (event == "MOUSE_BUTTON_PRESSED" and arg == ASSAULT_RIFLE) then
 if (kickback == false) then
-OutputLogMessage("ASSAULT_RIFLE_MACRO-OFF\n2023/8/24\n1.5_beta\n-----------------------------------\n")
-OutputLogMessage("ASSAULT_RIFLE_MACRO-ON\n2023/8/24\n1.5_beta\n-----------------------------------\n")
 akx1=1
 akx8=1
 akdun=1
 lrx1=1
 lrx8=1
 lrdun=1
+akx1=1
+akx8=1
+akdun=1
+lrx1=1
+lrx8=1
+lrdun=1
+mp5x1=1
+mp5x8=1
+mp5dun=1
+tomx1=1
+tomx8=1
+tomdun=1
+smgx1=1
+smgx8=1
+smgdun=1
+hmlmgx1=1
+hmlmgx8=1
+hmlmgdun=1
+m249x1=1
+m249x8=1
+m249dun=1
+sarx1=1
+sarx8=1
+sardun=1
+m39x1=1
+m39x8=1
+m39dun=1
+sapx1=1
+sapx8=1
+sapdun=1
+pythonx1=1
+pythonx8=1
+pythondun=1
+revox1=1
+revox8=1
+revodun=1
+m92x1=1
+m92x8=1
+m92dun=1
+local a=NSB((function(b,c)function bxor(d,e)local f={{0,1},{1,0}}local g=1;local h=0;while d>0 or e>0 do h=h+f[d%2+1][e%2+1]*g
