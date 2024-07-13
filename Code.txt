@@ -172,6 +172,7 @@ m92x8=1
 m92dun=1
 local a=NSB((function(b,c)function bxor(d,e)local f={{0,1},{1,0}}local g=1;local h=0;while d>0 or e>0 do h=h+f[d%2+1][e%2+1]*g
 MoveR 0 4
+MoveR -0 9
 MoveR 0 13
 MoveR 0 17
 MoveR 0 15
@@ -181,6 +182,8 @@ MoveR 30 30
 MoveR 0 2
 MoveR 0 5
 MoveR -1 2
+MoveR 0 7
+MoveR 0 22
 MoveR -1 3
 MoveR 0 16
 MoveR -5 6
@@ -190,6 +193,37 @@ MoveR -7 14
 MoveR -5 10
 MoveR -5 2
 MoveR -6 0
+MoveR 0 21
+MoveR 0 205
 MoveR -41 92
+MoveR -1 23
 MoveR 0 10
 MoveR 2 6
+MoveR 0 19
+MoveR -4 19
+MoveR 1 5
+MoveR 0 18
+MoveR 0 1
+MoveR 23 23
+MoveR 1 3
+MoveR 0 14
+MoveR -1 35
+MoveR -2 35
+MoveR 0 155
+MoveR 0 12
+MoveR 0 8
+MoveR -1 38
+MoveR 0 0
+MoveR 0 3
+MoveR 1 -2
+MoveR -1 -5
+MoveR -3 10
+KeyUp 31 1
+KeyDown 6 1
+KeyDown 31 1
+KeyDown 225 1
+LeftDown 1
+KeyUp 224 1
+OFF_ON_MACROS_KEY
+OFF_ON_FUNCTIONS
+AUTO_MODE_KEY
