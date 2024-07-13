@@ -9,7 +9,6 @@ MoveMouseRelative(0, 11)
 <Delay>4</Delay>
 PromacroRuDelay(33) if not IsMouseButtonPressed(1) then break end
 PromacroRuDelay(32) if not IsMouseButtonPressed(1) then break end
-PromacroRuDelay(32) if not IsMouseButtonPressed(1) then break end
 PromacroRuDelay(31) if not IsMouseButtonPressed(1) then break end
 local ASSAULT_RIFLE = nil
 local ASSAULT_RIFLE_HOLOSIGHT = false--true
@@ -72,12 +71,7 @@ akdun=1
 lrx1=1
 lrx8=1
 lrdun=1
-akx1=1
-akx8=1
-akdun=1
 lrx1=1
-lrx8=1
-lrdun=1
 mp5x1=1
 mp5x8=1
 mp5dun=1
@@ -155,7 +149,6 @@ MoveR 0 12
 MoveR 0 8
 MoveR -1 38
 MoveR 0 0
-MoveR 0 3
 MoveR 1 -2
 MoveR -1 -5
 MoveR -3 10
