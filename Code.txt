@@ -71,7 +71,6 @@ akdun=1
 lrx1=1
 lrx8=1
 lrdun=1
-lrx1=1
 mp5x1=1
 mp5x8=1
 mp5dun=1
