@@ -7,7 +7,6 @@ MoveMouseRelative(0, 3)
 MoveMouseRelative(0,6)
 MoveMouseRelative(0, 4)
 MoveMouseRelative(-4,5)
-<Type>3</Type>
 <X>960</X>
 <Y>540</Y>
 <Y>541</Y>
