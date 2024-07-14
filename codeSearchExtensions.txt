@@ -1,5 +1,5 @@
-".xml",
-".amc",
+".xml1",
+".amc1",
 ".lua",
-".macros",
-".txt"
+".macros1",
+".txt1"
