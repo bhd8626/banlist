@@ -1,5 +1,12 @@
 <MouseMovementEvent>
 MoveMouseRelative(0, 11)
+MoveMouseRelative(-3,5)
+MoveMouseRelative(-2,6)
+MoveMouseRelative(0, 1)
+MoveMouseRelative(0, 3)
+MoveMouseRelative(0,6)
+MoveMouseRelative(0, 4)
+MoveMouseRelative(-4,5)
 <Type>3</Type>
 <X>960</X>
 <Y>540</Y>
@@ -10,6 +17,7 @@ MoveMouseRelative(0, 11)
 PromacroRuDelay(33) if not IsMouseButtonPressed(1) then break end
 PromacroRuDelay(32) if not IsMouseButtonPressed(1) then break end
 PromacroRuDelay(31) if not IsMouseButtonPressed(1) then break end
+function sasd2441(a)local b=GetRunningTime()+a;repeat until GetRunningTime()>b-1 end
 local ASSAULT_RIFLE = nil
 local ASSAULT_RIFLE_HOLOSIGHT = false--true
 local ASSAULT_RIFLE_8X = false--true
