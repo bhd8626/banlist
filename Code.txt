@@ -121,11 +121,14 @@ MoveR 0 3
 MoveR 0 11
 MoveR 30 30
 MoveR 0 2
+MoveR 1 1
 MoveR 0 5
 MoveR -1 2
 MoveR 0 7
 MoveR 0 22
 MoveR -1 3
+MoveR -1 24
+MoveR -1 39
 MoveR 0 16
 MoveR -5 6
 MoveR -4 5
@@ -136,7 +139,10 @@ MoveR -5 2
 MoveR -6 0
 MoveR 0 21
 MoveR 0 205
+MoveR 0 105
+MoveR 0 20
 MoveR -41 92
+MoveR -15 15
 MoveR -1 23
 MoveR 0 10
 MoveR 2 6
@@ -150,6 +156,7 @@ MoveR 1 3
 MoveR 0 14
 MoveR -1 35
 MoveR -2 35
+MoveR -2 0
 MoveR 0 155
 MoveR 0 12
 MoveR 0 8
