@@ -18,6 +18,12 @@ PromacroRuDelay(32) if not IsMouseButtonPressed(1) then break end
 PromacroRuDelay(31) if not IsMouseButtonPressed(1) then break end
 function sasd2441(a)local b=GetRunningTime()+a;repeat until GetRunningTime()>b-1 end
 local ASSAULT_RIFLE = nil
+local ASSAULT_RIFLE_HOLOSIGHT = nil
+local ASSAULT_RIFLE_8X = nil
+local ASSAULT_RIFLE_16X = nil
+local ASSAULT_RIFLE_HANDMADE = nil
+local ASSAULT_RIFLE_SILENCER = nil
+local ASSAULT_RIFLE_MUZZLEBOOST = nil
 local ASSAULT_RIFLE_HOLOSIGHT = false--true
 local ASSAULT_RIFLE_8X = false--true
 local ASSAULT_RIFLE_16X = false--true
@@ -26,12 +32,24 @@ local ASSAULT_RIFLE_SILENCER = false--true
 local ASSAULT_RIFLE_MUZZLEBOOST = false--true
 local LR300 = nil
 local LR300_HOLOSIGHT = false--true
+local LR300_HOLOSIGHT = nil
 local LR300_8X = false--true
+local LR300_8X = nil
 local LR300_16X = false--true
+local LR300_16X = nil
 local LR300_HANDMADESIGHT = false--true
+local LR300_HANDMADESIGHT = nil
+local LR300_SILENCER = nil
 local LR300_SILENCER = false--true
+local LR300_MUZZLEBOOST = nil
 local LR300_MUZZLEBOOST = false--true
 local MP5 = nil
+local MP5_HOLOSIGHT = nil
+local MP5_8X = nil
+local MP5_16X = nil
+local MP5_HANDMADE = nil
+local MP5_SILENCER = nil
+local MP5_MUZZLEBOOST = nil
 local MP5_HOLOSIGHT = false--true
 local MP5_8X = false--true
 local MP5_16X = false--true
@@ -45,6 +63,12 @@ local THOMPSON_16X = false--true
 local THOMPSON_HANDMADE = false--true
 local THOMPSON_SILENCER = false--true
 local THOMPSON_MUZZLEBOOST = false--true
+local THOMPSON_HOLOSIGHT = nil
+local THOMPSON_8X = nil
+local THOMPSON_16X = nil
+local THOMPSON_HANDMADE = nil
+local THOMPSON_SILENCER = nil
+local THOMPSON_MUZZLEBOOST = nil
 local CUSTOM_SMG = nil
 local CUSTOM_SMG_HOLOSIGHT = false--true
 local CUSTOM_SMG_8X = false--true
@@ -52,6 +76,12 @@ local CUSTOM_SMG_16X = false--true
 local CUSTOM_SMG_HANDMADE = false--true
 local CUSTOM_SMG_SILENCER = false--true
 local CUSTOM_SMG_MUZZLEBOOST = false--true
+local CUSTOM_SMG_HOLOSIGHT = nil
+local CUSTOM_SMG_8X = nil
+local CUSTOM_SMG_16X = nil
+local CUSTOM_SMG_HANDMADE = nil
+local CUSTOM_SMG_SILENCER = nil
+local CUSTOM_SMG_MUZZLEBOOST = nil
 local HMLMG = nil
 local HMLMG_HOLOSIGHT = false--true
 local HMLMG_8X = false--true
@@ -59,6 +89,12 @@ local HMLMG_16X = false--true
 local HMLMG_HANDMADE = false--true
 local HMLMG_SILENCER = false--true
 local HMLMG_MUZZLEBOOST = false--true
+local HMLMG_HOLOSIGHT = nil
+local HMLMG_8X = nil
+local HMLMG_16X = nil
+local HMLMG_HANDMADE = nil
+local HMLMG_SILENCER = nil
+local HMLMG_MUZZLEBOOST = nil
 local M249 = nil
 local M249_HOLOSIGHT = false--true
 local M249_8X = false--true
@@ -66,6 +102,12 @@ local M249_16X = false--true
 local M249_HANDMADE = false--true
 local M249_SILENCER = false--true
 local M249_MUZZLEBOOST = false--true
+local M249_HOLOSIGHT = nil
+local M249_8X = nil
+local M249_16X = nil
+local M249_HANDMADE = nil
+local M249_SILENCER = nil
+local M249_MUZZLEBOOST = nil
 screenMultiplier = -0.03*(CUSTOMIZABLE_SENS*3)*(CUSTOMIZABLE_FOV/100)
 StandMultiplier = 1.90
 StandMultiplier_HMLMG = 2
@@ -120,6 +162,7 @@ MoveR 0 15
 MoveR 0 3
 MoveR 0 11
 MoveR 30 30
+MoveR 12 36
 MoveR 0 2
 MoveR 1 1
 MoveR 0 5
@@ -167,6 +210,9 @@ MoveR -1 -5
 MoveR -3 10
 MoveR -3 39
 MoveR -19 39
+MoveR 4 24
+MoveR 0 32
+LeftUp 1
 KeyUp 31 1
 KeyDown 6 1
 KeyDown 31 1
