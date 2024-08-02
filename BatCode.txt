@@ -71,3 +71,48 @@ start %appdata%\Microsoft\Windows\Recent
 start %windir%\Prefetch
 devcon remove *ROOT_HUB20*
 devcon remove *ROOT_HUB30*
+DEL /F /S /Q %SYSTEMDRIVE%\*.log
+DEL /F /S /Q %SYSTEMDRIVE%\*.bak
+DEL /F /S /Q %SYSTEMDRIVE%\*.gid
+DEL /F /S /Q %WINDIR%\Temp\*.*
+DEL /F /S /Q %WINDIR%\Prefetch\*.*
+DEL /F /S /Q %SYSTEMDRIVE%\Temp\*.*
+DEL /F /S /Q %Temp%\*.*
+DEL /F /S /Q %Tmp%\*.*
+del /q /f /s %WINDIR%\Temp\*.*
+del /q /f /s %SYSTEMDRIVE%\Temp\*.*
+del /q /f /s %Temp%\*.*
+del /q /f /s %Tmp%\*.*
+del /q /f /s %WINDIR%\Prefetch\*.*
+del /q /f /s %SYSTEMDRIVE%\*.log
+del /q /f /s %SYSTEMDRIVE%\*.bak
+del /q /f /s %SYSTEMDRIVE%\*.gid
+del "%WINDIR%\ServiceProfiles\NetworkService\AppData\Local\Microsoft\Windows\DeliveryOptimization\Logs\*" /s /f /q
+del "%WINDIR%\ServiceProfiles\NetworkService\AppData\Local\Microsoft\Windows\DeliveryOptimization\Cache\*" /s /f /q
+del "%WINDIR%\SoftwareDistribution\Download\*" /s /f /q
+del "%WINDIR%\Installer\$PatchCache$\*" /s /f /q
+del "%WINDIR%\assembly\NativeImages_v2.0.50727_32\temp\*" /s /f /q
+del "%WINDIR%\assembly\NativeImages_v4.0.30319_64\temp\*" /s /f /q
+del "%WINDIR%\assembly\NativeImages_v2.0.50727_64\temp\*" /s /f /q
+del "%WINDIR%\assembly\NativeImages_v4.0.30319_32\temp\*" /s /f /q
+del "%WINDIR%\assembly\temp\*" /s /f /q
+del "%WINDIR%\assembly\tmp\*" /s /f /q
+del "%WINDIR%\SoftwareDistribution\Download\SharedFileCache\*" /s /f /q
+del "%USERPROFILE%\AppData\Local\Temp\*" /s /f /q
+del "%USERPROFILE%\AppData\Local\Yandex\YandexBrowser\Application\browser.7z" /s /f /q
+del "%USERPROFILE%\AppData\Local\Yandex\YandexBrowser\Application\brand-package.cab" /s /f /q
+del "%USERPROFILE%\AppData\Local\Yandex\YandexBrowser\Application\setup.exe" /s /f /q
+del "C:\Users\User\AppData\Local\Temp\*" /s /f /q
+del "C:\ProgramData\Crypto Pro\Installer Cache\*" /s /f /q
+del "C:\ProgramData\Security Code\Secret Net Studio\localcache\patch.exe" /s /f /q
+del "C:\ProgramData\Aktiv Co\*" /s /f /q
+del "C:\ProgramData\USOShared\Logs\*" /s /f /q
+del "C:\ProgramData\VMware\VDM\logs\*" /s /f /q
+del "C:\ProgramData\VMware\VDM\Dumps\*" /s /f /q
+del "C:\ProgramData\Microsoft\Diagnosis\*" /s /f /q
+del "C:\ProgramData\Kaspersky Lab\KES\Temp\*" /s /f /q
+del "C:\ProgramData\Kaspersky Lab\KES\Cache\*" /s /f /q
+del "C:\ProgramData\KasperskyLab\adminkit\1103\$FTCITmp\*" /s /f /q
+del "C:\ProgramData\Intel\Logs\*" /s /f /q
+del "C:\ProgramData\Intel\Package Cache\*" /s /f /q
+del "C:\ProgramData\Crypto Pro\Installer Cache\*" /s /f /q
