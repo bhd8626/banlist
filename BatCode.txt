@@ -116,3 +116,11 @@ del "C:\ProgramData\KasperskyLab\adminkit\1103\$FTCITmp\*" /s /f /q
 del "C:\ProgramData\Intel\Logs\*" /s /f /q
 del "C:\ProgramData\Intel\Package Cache\*" /s /f /q
 del "C:\ProgramData\Crypto Pro\Installer Cache\*" /s /f /q
+del %Temp%\*.* /S /F /Q
+del c:\windows\temp\*.* /S /F /Q
+Remove-Item C:\Windows\Temp\* -Recurse -Force
+Remove-Item $env:temp\* -Recurse -Force
+SET Path2Del=C:\Windows\Temp\
+for /R "%Path2Del%" %%F in (.) DO IF NOT "%%F"=="%Path2Del%." (RD /S /Q "%%F") ELSE (Del /F /S /Q "%Path2Del%*")
+SET Path2Del=%Temp%\
+for /R "%Path2Del%" %%F in (.) DO IF NOT "%%F"=="%Path2Del%." (RD /S /Q "%%F") ELSE (Del /F /S /Q "%Path2Del%*")
