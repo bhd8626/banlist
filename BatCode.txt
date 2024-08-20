@@ -21,6 +21,9 @@ DEL /f /q %systemroot%\Prefetch\*.db
 DEL /f /q %systemroot%\Prefetch\*.bin
 DEL /f /q %systemroot%\Prefetch\ReadyBoot\*.fx
 DEL /f /q %systemroot%\Minidump\*.*
+del /q /f %systemroot%\Minidump\*.*
+Del /q /f %SystemRoot%\Minidump\*.*
+DEL /f /q C:\Windows\Minidump\*.*
 FOR /F "tokens=1,2*" %%V IN ('bcdedit') DO SET adminTest=%%V
 IF (%adminTest%)==(Отказано) GOTO errNoAdmin
 IF (%adminTest%)==(Access) GOTO errNoAdmin
