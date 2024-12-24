@@ -1,3 +1,5 @@
+MoveMouseRelative(0, 1) S(28)
+MoveMouseRelative(0, 1) S(6) 
 <MouseMovementEvent>
 MoveMouseRelative(0, 11)
 MoveMouseRelative(-3,5)
