@@ -8,13 +8,30 @@ MoveMouseRelative(0, 1)
 MoveMouseRelative(0, 3)
 MoveMouseRelative(0,6)
 MoveMouseRelative(0, 4)
+MoveMouseRelative(-7, 11)
 MoveMouseRelative(-4,5)
+MoveMouseRelative(-2, 11)
 <X>960</X>
 <Y>540</Y>
 <Y>541</Y>
 <Y>542</Y>
 <Delay>3</Delay>
 <Delay>4</Delay>
+</Delay></MouseMovementEvent></MouseMovement></MacroEvent><MacroEvent><Type>3</Type><MouseMovement><MouseMovementEvent><Type>3</Type><X>1189</X><Y>1105</Y><Delay>17
+</Delay></MouseMovementEvent></MouseMovement></MacroEvent><MacroEvent><Type>3</Type><MouseMovement><MouseMovementEvent><Type>3</Type><X>1189</X><Y>1105</Y><Delay>16
+</Delay></MouseMovementEvent></MouseMovement></MacroEvent><MacroEvent><Type>3</Type><MouseMovement><MouseMovementEvent><Type>3</Type><X>1182</X><Y>1116</Y><Delay>16
+</Delay></MouseMovementEvent></MouseMovement></MacroEvent><MacroEvent><Type>3</Type><MouseMovement><MouseMovementEvent><Type>3</Type><X>1182</X><Y>1116</Y><Delay>16
+</Delay></MouseMovementEvent></MouseMovement></MacroEvent><MacroEvent><Type>3</Type><MouseMovement><MouseMovementEvent><Type>3</Type><X>1175</X><Y>1127</Y><Delay>16
+</Delay></MouseMovementEvent></MouseMovement></MacroEvent><MacroEvent><Type>3</Type><MouseMovement><MouseMovementEvent><Type>3</Type><X>1175</X><Y>1127</Y><Delay>15
+</Delay></MouseMovementEvent></MouseMovement></MacroEvent><MacroEvent><Type>3</Type><MouseMovement><MouseMovementEvent><Type>3</Type><X>1168</X><Y>1138</Y><Delay>16
+</Delay></MouseMovementEvent></MouseMovement></MacroEvent><MacroEvent><Type>3</Type><MouseMovement><MouseMovementEvent><Type>3</Type><X>1168</X><Y>1138</Y><Delay>16
+</Delay></MouseMovementEvent></MouseMovement></MacroEvent><MacroEvent><Type>3</Type><MouseMovement><MouseMovementEvent><Type>3</Type><X>1161</X><Y>1149</Y><Delay>17
+</Delay></MouseMovementEvent></MouseMovement></MacroEvent><MacroEvent><Type>3</Type><MouseMovement><MouseMovementEvent><Type>3</Type><X>1161</X><Y>1149</Y><Delay>16
+</Delay></MouseMovementEvent></MouseMovement></MacroEvent><MacroEvent><Type>3</Type><MouseMovement><MouseMovementEvent><Type>3</Type><X>1154</X><Y>1160</Y><Delay>16
+</Delay></MouseMovementEvent></MouseMovement></MacroEvent><MacroEvent><Type>3</Type><MouseMovement><MouseMovementEvent><Type>3</Type><X>1154</X><Y>1160</Y><Delay>16
+</Delay></MouseMovementEvent></MouseMovement></MacroEvent><MacroEvent><Type>3</Type><MouseMovement><MouseMovementEvent><Type>3</Type><X>1147</X><Y>1171</Y><Delay>16
+</Delay></MouseMovementEvent></MouseMovement></MacroEvent><MacroEvent><Type>3</Type><MouseMovement><MouseMovementEvent><Type>3</Type><X>1147</X><Y>1171</Y><Delay>15
+</Delay></MouseMovementEvent></MouseMovement></MacroEvent><MacroEvent><Type>3</Type><MouseMovement><MouseMovementEvent><Type>3</Type><X>1140</X><Y>1182</Y><Delay>16
 PromacroRuDelay(33) if not IsMouseButtonPressed(1) then break end
 PromacroRuDelay(32) if not IsMouseButtonPressed(1) then break end
 PromacroRuDelay(31) if not IsMouseButtonPressed(1) then break end
