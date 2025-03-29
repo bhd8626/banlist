@@ -11,6 +11,10 @@ MoveMouseRelative(0, 4)
 MoveMouseRelative(-7, 11)
 MoveMouseRelative(-4,5)
 MoveMouseRelative(-2, 11)
+MoveMouseRelative(50, 50)
+for b = 1, #SKS_HS[STATE][X][(#SKS_HS[STATE][ST])] do
+for b = 1, #SKS_IS[STATE+1][X][(#SKS_IS[STATE+1][ST])] do
+for b = 1, #SAR_HS[STATE][X][(#SAR_HS[STATE][ST])] do
 <X>960</X>
 <Y>540</Y>
 <Y>541</Y>
@@ -36,6 +40,15 @@ PromacroRuDelay(33) if not IsMouseButtonPressed(1) then break end
 PromacroRuDelay(32) if not IsMouseButtonPressed(1) then break end
 PromacroRuDelay(31) if not IsMouseButtonPressed(1) then break end
 function sasd2441(a)local b=GetRunningTime()+a;repeat until GetRunningTime()>b-1 end
+local SAR = nil
+local SAR_HOLOSIGHT = nil
+local SAR_X8_SCOPE = nil
+local SKS = nil
+local SKS_HOLOSIGHT = nil
+local SKS_X8_SCOPE = nil
+local M39 = nil
+local M39_HOLOSIGHT = nil
+local M39_X8_SCOPE = nil
 local ASSAULT_RIFLE = nil
 local ASSAULT_RIFLE_HOLOSIGHT = nil
 local ASSAULT_RIFLE_8X = nil
@@ -257,3 +270,12 @@ OFF_ON_MACROS_KEY
 OFF_ON_FUNCTIONS
 AUTO_MODE_KEY
 KeyUp 9 1
+if gun == SAR then
+elseif gun == SAR_X8_SCOPE then
+elseif gun == SAR_HOLOSIGHT then
+elseif gun == SKS then
+elseif gun == SKS_X8_SCOPE then
+elseif gun == SKS_HOLOSIGHT then
+elseif gun == M39 then
+elseif gun == M39_X8_SCOPE then
+elseif gun == M39_HOLOSIGHT then
