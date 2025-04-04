@@ -19,8 +19,6 @@ for b = 1, #SAR_HS[STATE][X][(#SAR_HS[STATE][ST])] do
 <Y>540</Y>
 <Y>541</Y>
 <Y>542</Y>
-<Delay>3</Delay>
-<Delay>4</Delay>
 </Delay></MouseMovementEvent></MouseMovement></MacroEvent><MacroEvent><Type>3</Type><MouseMovement><MouseMovementEvent><Type>3</Type><X>1189</X><Y>1105</Y><Delay>17
 </Delay></MouseMovementEvent></MouseMovement></MacroEvent><MacroEvent><Type>3</Type><MouseMovement><MouseMovementEvent><Type>3</Type><X>1189</X><Y>1105</Y><Delay>16
 </Delay></MouseMovementEvent></MouseMovement></MacroEvent><MacroEvent><Type>3</Type><MouseMovement><MouseMovementEvent><Type>3</Type><X>1182</X><Y>1116</Y><Delay>16
