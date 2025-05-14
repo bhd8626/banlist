@@ -1,3 +1,4 @@
+<MouseMoveType>relative</MouseMoveType>
 MoveMouseRelative(0, 1) S(28)
 MoveMouseRelative(0, 1) S(6)
 MoveMouseRelative(0, 1) S(3)
