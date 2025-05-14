@@ -24,8 +24,6 @@ for b = 1, #SAR_HS[STATE][X][(#SAR_HS[STATE][ST])] do
 <x>518</x>
 <x>1543</x>
 <x>1359</x>
-<y>1</y>
-<y>2</y>
 <y>74</y>
 <x>519</x>
 <x>497</x>
@@ -53,7 +51,6 @@ for b = 1, #SAR_HS[STATE][X][(#SAR_HS[STATE][ST])] do
 <Y>542</Y>
 <x>46</x>
 <y>905</y>
-<y>0</y>
 </Delay></MouseMovementEvent></MouseMovement></MacroEvent><MacroEvent><Type>3</Type><MouseMovement><MouseMovementEvent><Type>3</Type><X>1189</X><Y>1105</Y><Delay>17
 </Delay></MouseMovementEvent></MouseMovement></MacroEvent><MacroEvent><Type>3</Type><MouseMovement><MouseMovementEvent><Type>3</Type><X>1189</X><Y>1105</Y><Delay>16
 </Delay></MouseMovementEvent></MouseMovement></MacroEvent><MacroEvent><Type>3</Type><MouseMovement><MouseMovementEvent><Type>3</Type><X>1182</X><Y>1116</Y><Delay>16
