@@ -1,5 +1,6 @@
 MoveMouseRelative(0, 1) S(28)
-MoveMouseRelative(0, 1) S(6) 
+MoveMouseRelative(0, 1) S(6)
+MoveMouseRelative(0, 1) S(3)
 <MouseMovementEvent>
 MoveMouseRelative(0, 11)
 MoveMouseRelative(-3,5)
@@ -15,10 +16,44 @@ MoveMouseRelative(50, 50)
 for b = 1, #SKS_HS[STATE][X][(#SKS_HS[STATE][ST])] do
 for b = 1, #SKS_IS[STATE+1][X][(#SKS_IS[STATE+1][ST])] do
 for b = 1, #SAR_HS[STATE][X][(#SAR_HS[STATE][ST])] do
+<x>1480</x>
+<x>1331</x>
+<y>96</y>
+<x>458</x>
+<x>539</x>
+<x>518</x>
+<x>1543</x>
+<x>1359</x>
+<y>1</y>
+<y>2</y>
+<y>74</y>
+<x>519</x>
+<x>497</x>
+<y>152</y>
+<y>329</y>
+<x>477</x>
+<y>91</y>
+<x>508</x>
+<x>1515</x>
+<y>13</y
+<x>1423</x>
+<y>10</y>
+<y>54</y>
+<y>48</y>
+<x>547</x>
+<y>50</y>
+<x>525</x>
+<y>95</y>
+<x>526</x>
+<y>74</y>
+<y>13</y>
 <X>960</X>
 <Y>540</Y>
 <Y>541</Y>
 <Y>542</Y>
+<x>46</x>
+<y>905</y>
+<y>0</y>
 </Delay></MouseMovementEvent></MouseMovement></MacroEvent><MacroEvent><Type>3</Type><MouseMovement><MouseMovementEvent><Type>3</Type><X>1189</X><Y>1105</Y><Delay>17
 </Delay></MouseMovementEvent></MouseMovement></MacroEvent><MacroEvent><Type>3</Type><MouseMovement><MouseMovementEvent><Type>3</Type><X>1189</X><Y>1105</Y><Delay>16
 </Delay></MouseMovementEvent></MouseMovement></MacroEvent><MacroEvent><Type>3</Type><MouseMovement><MouseMovementEvent><Type>3</Type><X>1182</X><Y>1116</Y><Delay>16
@@ -185,11 +220,13 @@ m92x8=1
 m92dun=1
 local a=NSB((function(b,c)function bxor(d,e)local f={{0,1},{1,0}}local g=1;local h=0;while d>0 or e>0 do h=h+f[d%2+1][e%2+1]*g
 MoveR 0 4
+MoveR 1 4
 MoveR -0 9
 MoveR 0 13
 MoveR 0 17
 MoveR 0 15
 MoveR 0 8
+MoveR -3 4
 MoveR -2 11
 MoveR -2 10
 MoveR 0 3
@@ -202,6 +239,7 @@ MoveR 1 1
 MoveR 0 5
 MoveR -1 2
 MoveR 0 7
+MoveR 0 -35
 MoveR 0 22
 MoveR -1 3
 MoveR -1 24
@@ -218,8 +256,12 @@ MoveR 0 21
 MoveR 0 205
 MoveR 0 105
 MoveR 0 20
+MoveR -1 5
+MoveR -2 7
 MoveR 0 -1
 MoveR -41 92
+MoveR 1 -59
+MoveR 1 -60
 MoveR -15 15
 MoveR -1 23
 MoveR 0 10
@@ -228,9 +270,9 @@ MoveR 0 6
 MoveR 0 19
 MoveR -4 19
 MoveR 1 5
+MoveR 0 -31
 MoveR 0 18
 MoveR 0 1
-MoveR 0 7
 MoveR 23 23
 MoveR 1 3
 MoveR -2 2
@@ -238,6 +280,7 @@ MoveR -2 4
 MoveR 0 4
 MoveR 0 14
 MoveR -1 35
+MoveR -2 3
 MoveR -2 35
 MoveR -2 0
 MoveR 0 -11
@@ -277,3 +320,14 @@ elseif gun == SKS_HOLOSIGHT then
 elseif gun == M39 then
 elseif gun == M39_X8_SCOPE then
 elseif gun == M39_HOLOSIGHT then
+recoil1 = not recoil1
+recoil2 = not recoil2
+recoil3 = not recoil3
+recoil4 = not recoil4
+recoil5 = not recoil5
+recoil6 = not recoil6
+recoil7 = not recoil7
+recoil8 = not recoil8
+recoil9 = not recoil9
+recoil10 = not recoil10
+recoil11 = not recoil11
