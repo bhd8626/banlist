@@ -1,0 +1,4145 @@
+using Microsoft.Win32;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Diagnostics.Eventing.Reader;
+using System.Drawing;
+using System.IO;
+using System.Linq;
+using System.Management;
+using System.Net;
+using System.Net.Http;
+using System.Runtime.InteropServices;
+using System.Security;
+using System.Security.Cryptography.X509Certificates;
+using System.Security.Principal;
+using System.Text;
+using System.Text.RegularExpressions;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+
+namespace CHEKER_ONYX_RUST
+{
+    public partial class ChekerPC : Form
+    {
+        public ChekerPC()
+        {
+            InitializeComponent();
+            InitializeCustomComponents();
+
+        }
+
+        private void InitializeCustomComponents()
+        {
+            this.button4Recent = new Button
+            {
+                Location = new System.Drawing.Point(12, 12),
+                Name = "button4Recent",
+                Size = new System.Drawing.Size(200, 50),
+                Text = "Проверить папку Recent",
+                UseVisualStyleBackColor = true
+            };
+
+            this.button4Recent.Click += new EventHandler(this.Button4Recent_Click);
+            this.Controls.Add(this.button4Recent);
+            this.AutoScaleDimensions = new System.Drawing.SizeF(9F, 20F);
+            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            this.ClientSize = new System.Drawing.Size(284, 81);
+            this.Name = "ChekerPC";
+            this.Text = "ChekerPC";
+        }
+
+        [DllImport("shell32.dll", CharSet = CharSet.Auto)]
+        private static extern int SHGetKnownFolderPath(ref Guid rfid, uint dwFlags, IntPtr hToken, out IntPtr pszPath);
+
+        private static readonly Guid DownloadsFolderGuid = new Guid("374DE290-123F-4565-9164-39C4925E467B");
+
+        private string GetDownloadsFolderPath()
+        {
+            Guid folderGuid = DownloadsFolderGuid; // Создаем копию для использования с ref
+            int hr = SHGetKnownFolderPath(ref folderGuid, 0, IntPtr.Zero, out IntPtr pszPath); // Встроенное объявление pszPath
+            if (hr == 0)
+            {
+                string path = Marshal.PtrToStringAuto(pszPath);
+                Marshal.FreeCoTaskMem(pszPath);
+
+                // Проверяем, существует ли путь, прежде чем возвращать его
+                if (Directory.Exists(path))
+                {
+                    return path;
+                }
+            }
+
+            // Если не удалось получить путь или он не существует, возвращаем null
+            return null;
+        }
+
+        //HKEY_CURRENT_USER\SOFTWARE\Classes\Local Settings\Software\Microsoft\Windows\Shell\MuiCache
+        private void Button4MuiCache_Click(object sender, EventArgs e)
+        {
+            RegistryKey key = Registry.CurrentUser.OpenSubKey(@"SOFTWARE\Classes\Local Settings\Software\Microsoft\Windows\Shell\MuiCache");
+
+            if (key != null)
+            {
+                Form valuesForm = new Form
+                {
+                    Text = "Значения MuiCache",
+                    Width = 896,
+                    Height = 489
+                };
+                TreeView treeView = new TreeView
+                {
+                    Dock = DockStyle.Fill,
+                    ContextMenuStrip = new ContextMenuStrip()
+                };
+                treeView.ContextMenuStrip.Opening += (s, ev) =>
+                {
+                    TreeNode selectedNode = treeView.SelectedNode;
+                    if (selectedNode == null)
+                    {
+                        ev.Cancel = true; // Если ничего не выбрано, отменяем открытие контекстного меню
+                    }
+                };
+
+                // Устанавливаем новый шрифт для TreeView
+                Font newFont = new Font(treeView.Font.FontFamily, 12);
+                treeView.Font = newFont;
+
+                // Добавляем опцию "Копировать" в контекстное меню
+                ToolStripMenuItem copyMenuItem = new ToolStripMenuItem("Копировать");
+                copyMenuItem.Click += (s, ev) =>
+                {
+                    if (treeView.SelectedNode != null)
+                    {
+                        Clipboard.SetText(treeView.SelectedNode.Text); // Копируем текст выбранного узла в буфер обмена
+                    }
+                };
+                treeView.ContextMenuStrip.Items.Add(copyMenuItem);
+
+                valuesForm.Controls.Add(treeView);
+
+                // Добавляем каждое значение в TreeView
+                foreach (string valueName in key.GetValueNames())
+                {
+                    // Получаем первый символ имени значения
+                    char firstChar = valueName[0];
+
+                    // Проверяем, является ли первый символ буквой диска или '{'
+                    if ((char.IsLetter(firstChar) && valueName.Length >= 2 && valueName[1] == ':') || firstChar == '{')
+                    {
+                        TreeNode node = new TreeNode(valueName);
+                        treeView.Nodes.Add(node);
+                    }
+                }
+
+                // Отображаем окно со значениями
+                valuesForm.ShowDialog();
+
+                // Закрываем раздел реестра
+                key.Close();
+            }
+            else
+            {
+                MessageBox.Show("Раздел реестра не найден.");
+            }
+        }
+
+        //SOFTWARE\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\Compatibility Assistant\Store
+        private void Button1Store_Click(object sender, EventArgs e)
+        {
+            // Открываем раздел реестра
+            RegistryKey key = Registry.CurrentUser.OpenSubKey(@"SOFTWARE\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\Compatibility Assistant\Store");
+
+            if (key != null)
+            {
+                // Создаем новое окно для отображения значений
+                Form valuesForm = new Form
+                {
+                    Text = "Значения Store",
+                    Width = 896,
+                    Height = 489
+                };
+
+                // Создаем элемент TreeView для отображения иерархии значений
+                TreeView treeView = new TreeView
+                {
+                    Dock = DockStyle.Fill,
+                    ContextMenuStrip = new ContextMenuStrip() // Создаем контекстное меню
+                };
+                treeView.ContextMenuStrip.Opening += (s, ev) =>
+                {
+                    TreeNode selectedNode = treeView.SelectedNode;
+                    if (selectedNode == null)
+                    {
+                        ev.Cancel = true; // Если ничего не выбрано, отменяем открытие контекстного меню
+                    }
+                };
+
+                // Устанавливаем новый шрифт для TreeView
+                Font newFont = new Font(treeView.Font.FontFamily, 12);
+                treeView.Font = newFont;
+
+                // Добавляем опцию "Копировать" в контекстное меню
+                ToolStripMenuItem copyMenuItem = new ToolStripMenuItem("Копировать");
+                copyMenuItem.Click += (s, ev) =>
+                {
+                    if (treeView.SelectedNode != null)
+                    {
+                        Clipboard.SetText(treeView.SelectedNode.Text); // Копируем текст выбранного узла в буфер обмена
+                    }
+                };
+                treeView.ContextMenuStrip.Items.Add(copyMenuItem);
+
+                valuesForm.Controls.Add(treeView);
+
+                // Добавляем каждое значение в TreeView
+                foreach (string valueName in key.GetValueNames())
+                {
+                    // Получаем первый символ имени значения
+                    char firstChar = valueName[0];
+
+                    // Проверяем, является ли первый символ буквой диска или '{'
+                    if ((char.IsLetter(firstChar) && valueName.Length >= 2 && valueName[1] == ':') || firstChar == '{')
+                    {
+                        TreeNode node = new TreeNode(valueName);
+                        treeView.Nodes.Add(node);
+                    }
+                }
+
+                // Отображаем окно со значениями
+                valuesForm.ShowDialog();
+
+                // Закрываем раздел реестра
+                key.Close();
+            }
+            else
+            {
+                MessageBox.Show("Раздел реестра не найден.");
+            }
+        }
+
+        //HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FeatureUsage\ShowJumpView
+        private void Button3ShowJumpView_Click(object sender, EventArgs e)
+        {
+            // Открываем раздел реестра
+            RegistryKey key = Registry.CurrentUser.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FeatureUsage\ShowJumpView");
+
+            if (key != null)
+            {
+                // Создаем новое окно для отображения значений
+                Form valuesForm = new Form
+                {
+                    Text = "Значения ShowJumpView",
+                    Width = 896,
+                    Height = 489
+                };
+
+                // Создаем ComboBox для выбора режима отображения
+                ComboBox comboBox = new ComboBox();
+                comboBox.Items.AddRange(new string[] { "Отображать все", "Отображать только диски" });
+                comboBox.SelectedIndex = 0; // Устанавливаем первый элемент как выбранный
+                comboBox.Dock = DockStyle.Top;
+                comboBox.DropDownStyle = ComboBoxStyle.DropDownList;
+                valuesForm.Controls.Add(comboBox);
+
+                TreeView treeView = new TreeView
+                {
+                    Dock = DockStyle.Fill,
+                    ContextMenuStrip = new ContextMenuStrip()
+                };
+                treeView.ContextMenuStrip.Opening += (s, ev) =>
+                {
+                    TreeNode selectedNode = treeView.SelectedNode;
+                    if (selectedNode == null)
+                    {
+                        ev.Cancel = true;
+                    }
+                };
+
+                Font newFont = new Font(treeView.Font.FontFamily, 12);
+                treeView.Font = newFont;
+                ToolStripMenuItem copyMenuItem = new ToolStripMenuItem("Копировать");
+                copyMenuItem.Click += (s, ev) =>
+                {
+                    if (treeView.SelectedNode != null)
+                    {
+                        Clipboard.SetText(treeView.SelectedNode.Text);
+                    }
+                };
+                treeView.ContextMenuStrip.Items.Add(copyMenuItem);
+
+                valuesForm.Controls.Add(treeView);
+
+                comboBox.SelectedIndexChanged += (s, ev) =>
+                {
+                    treeView.Nodes.Clear();
+                    AddRegistryValuesToTreeView(key, treeView, comboBox.SelectedIndex);
+                };
+
+                AddRegistryValuesToTreeView(key, treeView, comboBox.SelectedIndex);
+
+                valuesForm.ShowDialog();
+
+                key.Close();
+            }
+            else
+            {
+                MessageBox.Show("Раздел реестра не найден.");
+            }
+        }
+
+        private void AddRegistryValuesToTreeView(RegistryKey key, TreeView treeView, int filterMode)
+        {
+            foreach (string valueName in key.GetValueNames())
+            {
+                // Получаем первый символ имени значения
+                char firstChar = valueName[0];
+
+                // Проверяем условия фильтрации
+                bool addNode = false;
+                if (filterMode == 0) // Отображать все
+                {
+                    addNode = true;
+                }
+                else if (filterMode == 1) // Отображать только диски
+                {
+                    addNode = (char.IsLetter(firstChar) && valueName.Length >= 2 && valueName[1] == ':') || firstChar == '{';
+                }
+
+                // Добавляем узел в TreeView, если условия фильтрации выполнены
+                if (addNode)
+                {
+                    TreeNode node = new TreeNode(valueName);
+                    treeView.Nodes.Add(node);
+                }
+            }
+        }
+
+        //HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FeatureUsage\AppSwitched
+        private void Button2AppSwitched_Click(object sender, EventArgs e)
+        {
+            // Открываем раздел реестра
+            RegistryKey key = Registry.CurrentUser.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FeatureUsage\AppSwitched");
+
+            if (key != null)
+            {
+                // Создаем новое окно для отображения значений
+                Form valuesForm = new Form
+                {
+                    Text = "Значения AppSwitched",
+                    Width = 896,
+                    Height = 489
+                };
+
+                // Создаем элемент TreeView для отображения иерархии значений
+                TreeView treeView = new TreeView
+                {
+                    Dock = DockStyle.Fill,
+                    ContextMenuStrip = new ContextMenuStrip() // Создаем контекстное меню
+                };
+                treeView.ContextMenuStrip.Opening += (s, ev) =>
+                {
+                    TreeNode selectedNode = treeView.SelectedNode;
+                    if (selectedNode == null)
+                    {
+                        ev.Cancel = true; // Если ничего не выбрано, отменяем открытие контекстного меню
+                    }
+                };
+
+                // Устанавливаем новый шрифт для TreeView
+                Font newFont = new Font(treeView.Font.FontFamily, 12);
+                treeView.Font = newFont;
+
+                // Добавляем опцию "Копировать" в контекстное меню
+                ToolStripMenuItem copyMenuItem = new ToolStripMenuItem("Копировать");
+                copyMenuItem.Click += (s, ev) =>
+                {
+                    if (treeView.SelectedNode != null)
+                    {
+                        Clipboard.SetText(treeView.SelectedNode.Text); // Копируем текст выбранного узла в буфер обмена
+                    }
+                };
+                treeView.ContextMenuStrip.Items.Add(copyMenuItem);
+
+                valuesForm.Controls.Add(treeView);
+
+                // Добавляем каждое значение в TreeView
+                foreach (string valueName in key.GetValueNames())
+                {
+                    // Получаем первый символ имени значения
+                    char firstChar = valueName[0];
+
+                    // Проверяем, является ли первый символ буквой диска или '{'
+                    if ((char.IsLetter(firstChar) && valueName.Length >= 2 && valueName[1] == ':') || firstChar == '{')
+                    {
+                        TreeNode node = new TreeNode(valueName);
+                        treeView.Nodes.Add(node);
+                    }
+                }
+
+                // Отображаем окно со значениями
+                valuesForm.ShowDialog();
+
+                // Закрываем раздел реестра
+                key.Close();
+            }
+            else
+            {
+                MessageBox.Show("Раздел реестра не найден.");
+            }
+        }
+
+        // HKEY_LOCAL_MACHINE\SYSTEM\ControlSet001\Services\bam\State\UserSettings
+        private void Button1UserSetting_Click(object sender, EventArgs e)
+        {
+            // Открываем раздел реестра
+            RegistryKey key = Registry.LocalMachine.OpenSubKey(@"SYSTEM\ControlSet001\Services\bam\State\UserSettings");
+
+            if (key != null)
+            {
+                // Создаем новое окно для отображения значений
+                Form form = new Form
+                {
+                    Text = "Значения UserSettings",
+                    Width = 896,
+                    Height = 489
+                };
+
+                // Создаем элемент TreeView для отображения иерархии значений
+                TreeView treeView = new TreeView
+                {
+                    Dock = DockStyle.Fill,
+                    ContextMenuStrip = new ContextMenuStrip() // Создаем контекстное меню
+                };
+                treeView.ContextMenuStrip.Opening += (s, ev) =>
+                {
+                    TreeNode selectedNode = treeView.SelectedNode;
+                    if (selectedNode == null)
+                    {
+                        ev.Cancel = true; // Если ничего не выбрано, отменяем открытие контекстного меню
+                    }
+                };
+
+                // Устанавливаем новый шрифт для TreeView
+                Font newFont = new Font(treeView.Font.FontFamily, 12);
+                treeView.Font = newFont;
+
+                // Добавляем опцию "Копировать" в контекстное меню
+                ToolStripMenuItem copyMenuItem = new ToolStripMenuItem("Копировать");
+                copyMenuItem.Click += (s, ev) =>
+                {
+                    if (treeView.SelectedNode != null)
+                    {
+                        Clipboard.SetText(treeView.SelectedNode.Text); // Копируем текст выбранного узла в буфер обмена
+                    }
+                };
+                treeView.ContextMenuStrip.Items.Add(copyMenuItem);
+
+                form.Controls.Add(treeView);
+
+                // Добавляем каждый раздел в TreeView
+                foreach (string subKeyName in key.GetSubKeyNames())
+                {
+                    TreeNode subKeyNode = new TreeNode(subKeyName);
+                    treeView.Nodes.Add(subKeyNode);
+
+                    // Добавляем каждое значение из текущего раздела в TreeView
+                    RegistryKey subKey = key.OpenSubKey(subKeyName);
+                    foreach (string valueName in subKey.GetValueNames())
+                    {
+                        TreeNode valueNode = new TreeNode(valueName);
+                        subKeyNode.Nodes.Add(valueNode);
+                    }
+                    subKey.Close();
+                }
+
+                // Отображаем окно со значениями
+                form.ShowDialog();
+
+                // Закрываем раздел реестра
+                key.Close();
+            }
+            else
+            {
+                MessageBox.Show("Раздел реестра не найден.");
+            }
+        }
+
+        private bool DetectSuspiciousGoogleFolders()
+        {
+            string[] programFilesPaths =
+            {
+                Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+                Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86)
+            };
+
+            Regex folderRegex = new Regex(@"^Google\d+_\d+$", RegexOptions.IgnoreCase);
+
+            foreach (var path in programFilesPaths)
+            {
+                if (!Directory.Exists(path))
+                    continue;
+
+                try
+                {
+                    foreach (var dir in Directory.GetDirectories(path))
+                    {
+                        string dirName = Path.GetFileName(dir);
+                        if (folderRegex.IsMatch(dirName))
+                        {
+                            return true;
+                        }
+                    }
+                }
+                catch (UnauthorizedAccessException)
+                {
+                    continue;
+                }
+            }
+
+            return false;
+        }
+
+        private bool IsDriverSigned(string driverPath)
+        {
+            try
+            {
+                var cert = X509Certificate.CreateFromSignedFile(driverPath);
+                var cert2 = new X509Certificate2(cert);
+                return cert2.Verify() && !cert2.Subject.Contains("O=DO_NOT_TRUST");
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private bool CheckSuspiciousDriversForRust()
+        {
+            string[] highRiskDrivers = { "CH343SER", "kprocesshacker", "EneIo" };
+            string[] unsignedRiskDrivers = { "WinRing0" };
+            string[] whitelist = { "mhyprot2" };
+
+            string driversPath = Path.Combine(Environment.SystemDirectory, "drivers");
+
+            using (RegistryKey key = Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Services"))
+            {
+                if (key == null) return false;
+
+                foreach (string driver in highRiskDrivers)
+                {
+                    if (key.GetSubKeyNames().Contains(driver, StringComparer.OrdinalIgnoreCase))
+                        return true;
+                }
+
+                foreach (string driver in unsignedRiskDrivers)
+                {
+                    if (key.GetSubKeyNames().Contains(driver, StringComparer.OrdinalIgnoreCase) &&
+                        !whitelist.Contains(driver, StringComparer.OrdinalIgnoreCase))
+                    {
+                        string driverPath = Path.Combine(driversPath, driver + ".sys");
+                        if (File.Exists(driverPath) && !IsDriverSigned(driverPath))
+                            return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        private bool CheckSpecificWerTempItems(out string detectedItems)
+        {
+            detectedItems = "";
+            string werTempPath = @"C:\ProgramData\Microsoft\Windows\WER\Temp";
+            string[] targetItems = {
+                "WER3E85.tmp.WERInternalMetadata.xml",
+                "8700b9fe-0c0e-4add-b334-46183d5312bd",
+                "2d6d5516-e64d-40bb-b415-05a3856c78be",
+                "4b3d8a54-b0a4-472a-a15d-1d323caf308e",
+                "0b8900fe-3b60-41fa-956c-a106649ba4d7",
+                "WER6382.tmp.dmp",
+                "WER6652.tmp.WERInternalMetadata.xml",
+                "WER676C.tmp.xml"
+            };
+
+            try
+            {
+                foreach (string item in targetItems)
+                {
+                    string fullPath = Path.Combine(werTempPath, item);
+                    if (File.Exists(fullPath))
+                    {
+                        detectedItems += $"{item} (файл), ";
+                    }
+                    else if (Directory.Exists(fullPath))
+                    {
+                        detectedItems += $"{item} (папка), ";
+                    }
+                }
+
+                if (!string.IsNullOrEmpty(detectedItems))
+                {
+                    detectedItems = detectedItems.TrimEnd(',', ' ');
+                    return true;
+                }
+            }
+            catch
+            {
+                detectedItems = "Ошибка доступа к WER Temp";
+                return true;
+            }
+
+            return false;
+        }
+
+        private bool CheckTempFolders(out string detectedItems)
+        {
+            detectedItems = "";
+            string[] tempPathsToCheck = {
+            Path.GetTempPath(),
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Temp")
+            };
+
+            string[] suspiciousFiles = {
+                        "tia15ke2.dvi", "x22hl5ic.ipv", "KrackRustRing1.vmp.exe", "evbE01F.tmp", "evb4476.tmp", "evb3789.tmp", "evb5090.tmp", "evb50A1.tmp", "evb528D.tmp", "gen_py", "UruMitDWN.exe", "996E.exe",
+                        "rhlvdshu.zva.psm1", "__PSScriptPolicyTest_gizldnac.psc.ps1", "8aa2fba1-99ef-483c-858a-580ea3ff1662"
+                    };
+
+            string[] suspiciousFolders = {
+                        "2C43F971-4A95-4F20-AD77-BDB3F8AADD93",
+                        "F28620FD-997E-4BD6-BD23-63D62531913B",
+                        "Costura", "gen_py"
+                    };
+
+            foreach (string tempPath in tempPathsToCheck)
+            {
+                if (!Directory.Exists(tempPath)) continue;
+
+                // Проверка подозрительных файлов
+                foreach (string file in suspiciousFiles)
+                {
+                    string fullPath = Path.Combine(tempPath, file);
+                    if (File.Exists(fullPath))
+                    {
+                        detectedItems += $"{file} (файл в {tempPath}), ";
+
+                        // Добавляем информацию о файле в лог
+                        try
+                        {
+                            FileInfo fileInfo = new FileInfo(fullPath);
+                            detectedItems += $"\nРазмер: {fileInfo.Length} байт, " +
+                                             $"Создан: {fileInfo.CreationTime}, " +
+                                             $"Изменен: {fileInfo.LastWriteTime}";
+                        }
+                        catch
+                        {
+                            detectedItems += " (не удалось получить доп. информацию)";
+                        }
+                    }
+                }
+
+                // Проверка подозрительных папок
+                foreach (string folderPattern in suspiciousFolders)
+                {
+                    if (folderPattern.Contains("*") || folderPattern.Contains("?"))
+                    {
+                        try
+                        {
+                            string[] directories = Directory.GetDirectories(tempPath, folderPattern);
+                            foreach (string dir in directories)
+                            {
+                                detectedItems += $"{Path.GetFileName(dir)} (папка в {tempPath}), ";
+
+                                // Добавляем информацию о папке в лог
+                                try
+                                {
+                                    DirectoryInfo dirInfo = new DirectoryInfo(dir);
+                                    detectedItems += $"\nСодержит файлов: {dirInfo.GetFiles().Length}, " +
+                                                   $"Создана: {dirInfo.CreationTime}";
+                                }
+                                catch
+                                {
+                                    detectedItems += " (не удалось получить доп. информацию)";
+                                }
+                            }
+                        }
+                        catch { continue; }
+                    }
+                    else
+                    {
+                        string folderPath = Path.Combine(tempPath, folderPattern);
+                        if (Directory.Exists(folderPath))
+                        {
+                            detectedItems += $"{folderPattern} (папка в {tempPath}), ";
+
+                            // Добавляем информацию о папке в лог
+                            try
+                            {
+                                DirectoryInfo dirInfo = new DirectoryInfo(folderPath);
+                                detectedItems += $"\nСодержит файлов: {dirInfo.GetFiles().Length}, " +
+                                               $"Создана: {dirInfo.CreationTime}";
+                            }
+                            catch
+                            {
+                                detectedItems += " (не удалось получить доп. информацию)";
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (!string.IsNullOrEmpty(detectedItems))
+            {
+                detectedItems = detectedItems.TrimEnd(',', ' ');
+                return true;
+            }
+
+            return false;
+        }
+
+        private bool CheckDownloadsFolder(out string detectedItems)
+        {
+            detectedItems = "";
+            string downloadsPath = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                "Downloads");
+
+            string[] suspiciousFiles = {
+                "DXGIDebug.dll", "Cheat.exe", "BA58C60D92F4.exe",
+                "applog.txt", "6016e803e17b6ae8d6ef435542c94880e7bce17822e62560f7a1e875aec52651.exe",
+                "BA58C60D92F4.exe.old", "NAIM_V3.0.1_FREE.exe",
+                "d54da2e35e94c6ccff4a9af9232b0f8d2ca36d1881d486901557afda3a35e420.l4j.ini",
+                "changename.com", "changename.exe", "Newversion.exe"
+            };
+
+            foreach (string file in suspiciousFiles)
+            {
+                string fullPath = Path.Combine(downloadsPath, file);
+                if (File.Exists(fullPath))
+                {
+                    detectedItems += $"{file}, ";
+                }
+            }
+
+            if (!string.IsNullOrEmpty(detectedItems))
+            {
+                detectedItems = detectedItems.TrimEnd(',', ' ');
+                return true;
+            }
+
+            return false;
+        }
+
+        private bool CheckAppDataLocalFolder(out string detectedItems)
+        {
+            detectedItems = "";
+            string localAppDataPath = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                "AppData", "Local");
+
+            string[] suspiciousFolders = {
+            "pro.orion-security",
+            "fearcheat"
+            };
+
+            foreach (string folder in suspiciousFolders)
+            {
+                string fullPath = Path.Combine(localAppDataPath, folder);
+                if (Directory.Exists(fullPath))
+                {
+                    detectedItems += $"{folder} (папка в AppData\\Local), ";
+                }
+            }
+
+            if (!string.IsNullOrEmpty(detectedItems))
+            {
+                detectedItems = detectedItems.TrimEnd(',', ' ');
+                return true;
+            }
+
+            return false;
+        }
+
+        private bool CheckSuspiciousPowerShellTranscripts(out string detectedItems)
+        {
+            detectedItems = "";
+            string documentsPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+
+            try
+            {
+                foreach (string folder in Directory.GetDirectories(documentsPath))
+                {
+                    string folderName = Path.GetFileName(folder);
+
+                    if (folderName.Length == 8 && folderName.All(char.IsDigit))
+                    {
+                        foreach (string file in Directory.GetFiles(folder, "PowerShell_transcript*"))
+                        {
+                            detectedItems += $"{Path.GetFileName(file)} (в папке {folderName}), ";
+                        }
+                    }
+                }
+
+                if (!string.IsNullOrEmpty(detectedItems))
+                {
+                    detectedItems = detectedItems.TrimEnd(',', ' ');
+                    return true;
+                }
+            }
+            catch
+            {
+                detectedItems = "Ошибка доступа к PowerShell Transcripts";
+                return true;
+            }
+
+            return false;
+        }
+
+        // Проверка реестра
+        private (bool Detected, string DetectionDetails) CheckRegedit()
+        {
+            string userSid = GetCurrentUserSid();
+
+            // 1. Проверка FirmwareModified
+            if (CheckRegistryKey(@"HKEY_LOCAL_MACHINE\BCD00000000\Description",
+                                "FirmwareModified", "1"))
+                return (true, "Обнаружено: FirmwareModified = 1");
+
+            // 2. Проверка ExceptionRecord
+            if (CheckRegistryKeyExists(@"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\Debug",
+                                     "ExceptionRecord"))
+                return (true, "Обнаружено: ExceptionRecord");
+
+            // 3. Проверка наличия пути BCD
+            if (CheckRegistryPathExists(@"HKEY_LOCAL_MACHINE\BCD00000000\Objects\{71a3c7fc-f751-4982-aec1-e958357e6813}\Elements\250000f0"))
+                return (true, "Обнаружено: Elements\\250000f0");
+
+            // 4. Проверка StoreLocation
+            if (CheckRegistryKeyExists($@"HKEY_USERS\{userSid}\Software\Microsoft\Windows\Windows Error Reporting\Debug",
+                             "StoreLocation"))
+                return (true, $"Обнаружено: Debug\\StoreLocation для пользователя {userSid}");
+
+            // 6. Проверка FeatureSettingsOverride и FeatureSettingsOverrideMask
+            if (CheckRegistryKey(@"HKEY_LOCAL_MACHINE\SYSTEM\ControlSet001\Control\Session Manager\Memory Management",
+                                "FeatureSettingsOverride", "3"))
+                return (true, "Обнаружено: FeatureSettingsOverride = 3 (ControlSet001)");
+
+            if (CheckRegistryKey(@"HKEY_LOCAL_MACHINE\SYSTEM\ControlSet001\Control\Session Manager\Memory Management",
+                                "FeatureSettingsOverrideMask", "3"))
+                return (true, "Обнаружено: FeatureSettingsOverrideMask = 3 (ControlSet001)");
+
+            if (CheckRegistryKey(@"HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management",
+                                "FeatureSettingsOverride", "3"))
+                return (true, "Обнаружено: FeatureSettingsOverride = 3 (CurrentControlSet)");
+
+            if (CheckRegistryKey(@"HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management",
+                                "FeatureSettingsOverrideMask", "3"))
+                return (true, "Обнаружено: FeatureSettingsOverrideMask = 3 (CurrentControlSet)");
+
+            // Проверка 3uTools
+            var toolsCheck = CheckMultiple3uToolsVersions();
+            if (toolsCheck.Detected)
+                return toolsCheck;
+
+            // Криптографические OID
+            if (CheckRegistryPathExists(@"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Cryptography\OID\EncodingType 0\CryptDllFindOIDInfo\1.3.6.1.4.1.311.60.3.1!7"))
+                return (true, "Обнаружено: Криптографический OID 1.3.6.1.4.1.311.60.3.1!7");
+            if (CheckRegistryPathExists(@"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Cryptography\OID\EncodingType 0\CryptDllFindOIDInfo\1.3.6.1.4.1.311.60.3.2!7"))
+                return (true, "Обнаружено: Криптографический OID 1.3.6.1.4.1.311.60.3.2!7");
+            if (CheckRegistryPathExists(@"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Cryptography\OID\EncodingType 0\CryptDllFindOIDInfo\1.3.6.1.4.1.311.60.3.3!7"))
+                return (true, "Обнаружено: Криптографический OID 1.3.6.1.4.1.311.60.3.3!7");
+
+            // Конфигурация криптографии
+            if (CheckRegistryPathExists(@"HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Policies\Microsoft\Cryptography\Configuration"))
+                return (true, "Обнаружено: HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Policies\\Microsoft\\Cryptography\\Configuration");
+
+            // Сертификаты
+            if (CheckRegistryPathExists($@"HKEY_USERS\{userSid}\Software\Microsoft\SystemCertificates\Root\Certificates\0174E68C97DDF1E0EEEA415EA336A163D2B61AFD"))
+                return (true, $"Обнаружено: 0174E68C97DDF1E0EEEA415EA336A163D2B61AFD");
+
+            // Windows Error Reporting
+            if (CheckRegistryPathExists($@"HKEY_USERS\{userSid}\Software\Microsoft\Windows\Windows Error Reporting\Debug"))
+                return (true, $"Обнаружено: Windows Error Reporting\\Debug");
+
+            // BCD пути
+            if (CheckRegistryPathExists(@"HKEY_LOCAL_MACHINE\BCD00000000\Description\FirmwareModified"))
+                return (true, "Обнаружено: FirmwareModified");
+            if (CheckRegistryPathExists(@"HKEY_LOCAL_MACHINE\BCD00000000\Objects\{71a3c7fc-f751-4982-aec1-e958357e6813}"))
+                return (true, "Обнаружено: {71a3c7fc-f751-4982-aec1-e958357e6813}");
+
+            // Проверка пути program_RASAPI32, program_RASMANCS
+            if (CheckRegistryPathExists(@"HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Microsoft\Tracing\program_RASAPI32"))
+                return (true, "Обнаружено:Tracing\\program_RASAPI32");
+            if (CheckRegistryPathExists(@"HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Microsoft\Tracing\Fear_RASAPI32"))
+                return (true, "Обнаружено: Tracing\\Fear_RASAPI32");
+            if (CheckRegistryPathExists(@"HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Microsoft\Tracing\program_RASMANCS"))
+                return (true, "Обнаружено: program_RASMANCS");
+            if (CheckRegistryPathExists(@"HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Microsoft\Tracing\Fear_RASMANCS"))
+                return (true, "Обнаружено: Fear_RASMANCS");
+
+            // Проверка значений VulnerableDriverBlocklistEnable
+            if (CheckRegistryKey(@"HKEY_LOCAL_MACHINE\SYSTEM\ControlSet001\Control\CI\Config",
+                                "VulnerableDriverBlocklistEnable", "0"))
+                return (true, "Обнаружено: VulnerableDriverBlocklistEnable = 0");
+
+            // Проверка LastKnownGoodTime
+            byte[] expectedValue1 = new byte[] { 0x63, 0x51, 0x33, 0xa1, 0x18, 0xb1, 0xdb, 0x01 };
+            byte[] expectedValue2 = new byte[] { 0x93, 0xed, 0x30, 0x1d, 0x15, 0xb1, 0xdb, 0x01 };
+            byte[] actualValue = GetRegistryBinaryValue(@"HKEY_LOCAL_MACHINE\SYSTEM\ControlSet001\Services\W32Time\Config",
+                                                     "LastKnownGoodTime");
+
+            if (actualValue != null &&
+                (ByteArraysEqual(actualValue, expectedValue1) || ByteArraysEqual(actualValue, expectedValue2)))
+                return (true, "Обнаружено: LastKnownGoodTime содержит подозрительное значение");
+
+            // Проверка IdentityCRL
+            byte[] identityCRLValue1 = new byte[] { /* ... */ };
+            byte[] identityCRLValue2 = new byte[] { /* ... */ };
+            byte[] identityCRLValue3 = new byte[] { /* ... */ };
+
+            byte[] actualCRLValue1 = GetRegistryBinaryValue(@"HKEY_CURRENT_USER\Software\Microsoft\IdentityCRL\Immersive\production\Property\00184005A498FA74", "");
+            if (actualCRLValue1 != null && ByteArraysEqual(actualCRLValue1, identityCRLValue1))
+                return (true, "Обнаружено: подозрительное значение в 00184005A498FA74");
+
+            byte[] actualCRLValue2 = GetRegistryBinaryValue(@"HKEY_CURRENT_USER\Software\Microsoft\IdentityCRL\Immersive\production\Property\001880079CA25378", "");
+            if (actualCRLValue2 != null && ByteArraysEqual(actualCRLValue2, identityCRLValue2))
+                return (true, "Обнаружено: подозрительное значение в 001880079CA25378");
+
+            byte[] actualCRLValue3 = GetRegistryBinaryValue(@"HKEY_CURRENT_USER\Software\Microsoft\IdentityCRL\Immersive\production\Property\0018C0042EEB5123", "");
+            if (actualCRLValue3 != null && ByteArraysEqual(actualCRLValue3, identityCRLValue3))
+                return (true, "Обнаружено: подозрительное значение в 0018C0042EEB5123");
+
+            // Проверка Image File Execution Options (cmd.exe)
+            if (CheckRegistryPathExists(@"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\cmd.exe"))
+                return (true, "Обнаружено: Image File Execution Options\\cmd.exe");
+
+            // Проверка Image File Execution Options (rundll32.exe)
+            if (CheckRegistryPathExists(@"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\rundll32.exe"))
+                return (true, "Обнаружено: Image File Execution Options\\rundll32.exe");
+
+            // Проверка Image File Execution Options (Newversion.exe)
+            if (CheckRegistryPathExists(@"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\Newversion.exe"))
+                return (true, "Обнаружено: Image File Execution Options\\Newversion.exe");
+
+            // Проверка Image File Execution Options для program.exe
+            if (CheckRegistryPathExists(@"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\program.exe"))
+                return (true, "Обнаружено: Image File Execution Options\\program.exe");
+
+            /*// Проверка AppModel Lookaside (machine)
+            if (CheckRegistryPathExists(@"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\AppModel\Lookaside\machine"))
+                return (true, "Обнаружено: AppModel\\Lookaside\\machine");*/
+
+            /*// Проверка AppModel Lookaside (user)
+            if (CheckRegistryPathExists(@"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\AppModel\Lookaside\user"))
+                return (true, "Обнаружено: AppModel\\Lookaside\\user");*/
+
+            // Проверка Image File Execution Options
+            if (CheckRegistryPathExists(@"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\file.exe"))
+                return (true, "Обнаружено: Image File Execution Options\\file.exe");
+
+            if (CheckRegistryPathExists(@"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\sc.exe"))
+                return (true, "Обнаружено: Image File Execution Options\\sc.exe");
+
+            if (CheckRegistryPathExists(@"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\w32tm.exe"))
+                return (true, "Обнаружено: Image File Execution Options\\w32tm.exe");
+
+            if (CheckRegistryPathExists(@"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\WidgetService.exe"))
+                return (true, "Обнаружено: Image File Execution Options\\WidgetService.exe");
+
+            return (false, "Подозрительные записи в реестре не обнаружены");
+        }
+
+        private string GetCurrentUserSid()
+        {
+            try
+            {
+                // Идентификатор текущего пользователя
+                WindowsIdentity currentUser = WindowsIdentity.GetCurrent();
+                return currentUser.User?.Value;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Ошибка получения SID: {ex.Message}");
+                return null;
+            }
+        }
+
+        private byte[] GetRegistryBinaryValue(string keyPath, string valueName)
+        {
+            try
+            {
+                using (RegistryKey key = GetRegistryKeyFromPath(keyPath))
+                {
+                    if (key != null)
+                    {
+                        return (byte[])key.GetValue(valueName);
+                    }
+                }
+            }
+            catch
+            {
+                // В случае ошибки просто возвращаем null
+            }
+            return null;
+        }
+
+        // Метод для получения RegistryKey из полного пути
+        private RegistryKey GetRegistryKeyFromPath(string fullPath)
+        {
+            string[] parts = fullPath.Split('\\');
+            RegistryKey baseKey = null;
+
+            switch (parts[0])
+            {
+                case "HKEY_LOCAL_MACHINE":
+                    baseKey = Registry.LocalMachine;
+                    break;
+                case "HKEY_CURRENT_USER":
+                    baseKey = Registry.CurrentUser;
+                    break;
+                case "HKEY_USERS":
+                    baseKey = Registry.Users;
+                    break;
+                default:
+                    return null;
+            }
+
+            try
+            {
+                string subKeyPath = string.Join("\\", parts, 1, parts.Length - 1);
+                return baseKey.OpenSubKey(subKeyPath);
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        // Метод для сравнения массивов байтов
+        private bool ByteArraysEqual(byte[] a1, byte[] a2)
+        {
+            if (a1 == a2) return true;
+            if (a1 == null || a2 == null || a1.Length != a2.Length) return false;
+
+            for (int i = 0; i < a1.Length; i++)
+            {
+                if (a1[i] != a2[i]) return false;
+            }
+            return true;
+        }
+
+        // Вспомогательные методы для работы с реестром
+        private bool CheckRegistryKey(string fullPath, string valueName, string expectedValue)
+        {
+            try
+            {
+                using (RegistryKey key = GetRegistryKeyFromFullPath(fullPath))
+                {
+                    if (key != null)
+                    {
+                        object value = key.GetValue(valueName);
+                        return value != null && value.ToString() == expectedValue;
+                    }
+                }
+            }
+            catch
+            {
+                return false;
+            }
+            return false;
+        }
+
+        private bool CheckRegistryKeyExists(string fullPath, string valueName)
+        {
+            try
+            {
+                using (RegistryKey key = GetRegistryKeyFromFullPath(fullPath))
+                {
+                    return key?.GetValue(valueName) != null;
+                }
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private bool CheckRegistryPathExists(string fullPath)
+        {
+            try
+            {
+                using (RegistryKey key = GetRegistryKeyFromFullPath(fullPath))
+                {
+                    return key != null;
+                }
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private RegistryKey GetRegistryKeyFromFullPath(string fullPath)
+        {
+            string[] parts = fullPath.Split('\\');
+            RegistryKey baseKey = null;
+
+            switch (parts[0])
+            {
+                case "HKEY_LOCAL_MACHINE":
+                    baseKey = Registry.LocalMachine;
+                    break;
+                case "HKEY_USERS":
+                    baseKey = Registry.Users;
+                    break;
+                default:
+                    return null;
+            }
+
+            string subKeyPath = string.Join("\\", parts.Skip(1).ToArray());
+            return baseKey.OpenSubKey(subKeyPath, false);
+        }
+
+        private (bool Detected, string DetectionDetails) CheckMultiple3uToolsVersions()
+        {
+            string[] registryKeysToCheck = new[]
+            {
+                @"SOFTWARE\3uTools",
+                @"SOFTWARE\3uTools1",
+                @"SOFTWARE\3uTools2",
+                @"SOFTWARE\3uToolsWeb"
+            };
+
+            foreach (var keyPath in registryKeysToCheck)
+            {
+                try
+                {
+                    using (var key = Registry.CurrentUser.OpenSubKey(keyPath))
+                    {
+                        if (key != null)
+                        {
+                            return (true, $"Обнаружено: HKEY_CURRENT_USER\\{keyPath}");
+                        }
+                    }
+                }
+                catch
+                {
+                    continue;
+                }
+            }
+
+            return (false, string.Empty);
+        }
+
+        private bool CheckClrUsageLogs(out string detectedItem)
+        {
+            detectedItem = "";
+            string clrLogPath = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                "AppData", "Local", "Microsoft", "CLR_v4.0", "UsageLogs", "powershell.exe.log");
+
+            if (File.Exists(clrLogPath))
+            {
+                detectedItem = "powershell.exe.log (лог CLR)";
+                return true;
+            }
+
+            return false;
+        }
+
+        private bool CheckSystem32ForQAgent(out string detectedItem)
+        {
+            detectedItem = "";
+            string system32Path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "QAgent.dll");
+
+            if (File.Exists(system32Path))
+            {
+                detectedItem = "QAgent.dll (в System32)";
+                return true;
+            }
+
+            return false;
+        }
+
+        private bool CheckNpcscjdbFolder(out string detectedItem)
+        {
+            detectedItem = "";
+            string npcscjdbPath = @"C:\npcscjdb\nphnpxcs.exe";
+
+            if (File.Exists(npcscjdbPath))
+            {
+                detectedItem = "nphnpxcs.exe (в C:\\npcscjdb\\)";
+                return true;
+            }
+
+            return false;
+        }
+
+        private bool CheckSAMPLEPATH()
+        {
+            try
+            {
+                string samplePath = Environment.ExpandEnvironmentVariables("%SAMPLEPATH%");
+
+                if (!Directory.Exists(samplePath))
+                    return false;
+
+                // Хеш-сет для быстрого поиска (без учета регистра)
+                var suspiciousFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    "827206d245cb9353c4ba9fe9dcddff0463d36a4b116dd49ee9342172c82eac62.exe",
+                    "Newversion.exe",
+                    "cheat.exe",
+                    "BA58C60D92F4.exe",
+                    "8478fbca03cad2167973a431575251bf372e6860820745bdc05da7a5696f59df",
+                    "zapret.exe"
+                };
+
+                return Directory.EnumerateFiles(samplePath).Select(Path.GetFileName).Any(f => suspiciousFiles.Contains(f));
+            }
+            catch
+            {
+                return true;
+            }
+        }
+
+        private async void Button1SmartScreen_Click(object sender, EventArgs e)
+        {
+            bool smartScreenSuspicion = false;
+            bool otherCheatDetected = false;
+            bool svchostMitigationDisabled = false;
+            StringBuilder detectionReason = new StringBuilder(); // Для накопления причин обнаружения
+
+            // 1. Проверка системного реестра
+            var (detected, details) = CheckRegedit();
+            if (detected)
+            {
+                otherCheatDetected = true;
+                detectionReason.AppendLine(details);
+            }
+
+            // 1.1 Проверка SAMPLEPATH
+            if (CheckSAMPLEPATH())
+            {
+                otherCheatDetected = true;
+                detectionReason.AppendLine("Обнаружены подозрительные файлы в SAMPLEPATH");
+                goto FinalCheck;
+            }
+
+            // 2. Проверка SmartScreen
+            using (RegistryKey key = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer"))
+            {
+                if (key?.GetValue("SmartScreenEnabled")?.ToString().Equals("Off", StringComparison.OrdinalIgnoreCase) == true)
+                {
+                    smartScreenSuspicion = true;
+                    detectionReason.AppendLine("SmartScreen отключен");
+                }
+            }
+
+            // 2.1 Проверка подозрительных команд в истории PowerShell
+            if (CheckSuspiciousPowerShellCommands(out string psCommandsDetection))
+            {
+                otherCheatDetected = true;
+                detectionReason.AppendLine("Обнаружены подозрительные команды PowerShell");
+            }
+
+            // 2.2 Проверка подозрительных процессов и команд
+            if (CheckSuspiciousProcesses(out string detectedProcesses))
+            {
+                otherCheatDetected = true;
+                detectionReason.AppendLine("Обнаружены подозрительные процессы/команды:");
+                detectionReason.AppendLine(detectedProcesses);
+            }
+
+            // Проверка подозрительных процессов SecurityHealthService
+            if (CheckSuspiciousSecurityProcesses(out string securityProcessDetection))
+            {
+                otherCheatDetected = true;
+                detectionReason.AppendLine(securityProcessDetection);
+            }
+
+            // 3. Проверка PowerShell транскриптов в 8-значных папках
+            if (CheckSuspiciousPowerShellTranscripts(out string psTranscriptsDetection))
+            {
+                otherCheatDetected = true;
+                detectionReason.AppendLine("Обнаружены подозрительные PowerShell транскрипты");
+            }
+
+            // 4. Проверка процессов PowerShell
+            try
+            {
+                foreach (var process in Process.GetProcessesByName("powershell"))
+                {
+                    try
+                    {
+                        using (var searcher = new ManagementObjectSearcher(
+                            $"SELECT CommandLine FROM Win32_Process WHERE ProcessId = {process.Id}"))
+                        {
+                            foreach (ManagementObject obj in searcher.Get())
+                            {
+                                string cmdLine = obj["CommandLine"]?.ToString() ?? "";
+                                if (cmdLine.Contains("hypervisorpresent") || cmdLine.Contains("virtualizationfirmwareenabled"))
+                                {
+                                    otherCheatDetected = true;
+                                    detectionReason.AppendLine("Обнаружены подозрительные PowerShell команды");
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    finally { process.Dispose(); }
+                }
+            }
+            catch { }
+
+            // 6. Проверка WER Temp
+            if (CheckSpecificWerTempItems(out string werTempDetection))
+            {
+                otherCheatDetected = true;
+                detectionReason.AppendLine($"Обнаружены подозрительные элементы в WER Temp: {werTempDetection}");
+            }
+
+            // 7. Проверка драйверов
+            if (CheckSuspiciousDriversForRust())
+            {
+                otherCheatDetected = true;
+                detectionReason.AppendLine("Обнаружены подозрительные драйверы");
+            }
+
+            // 8. Проверка Google-папок
+            if (DetectSuspiciousGoogleFolders())
+            {
+                otherCheatDetected = true;
+                detectionReason.AppendLine("Обнаружены подозрительные Google-папки");
+            }
+
+            // 9. Проверка LDAP
+            using (RegistryKey key = Registry.LocalMachine.OpenSubKey(@"SYSTEM\ControlSet001\Services\ldap"))
+            {
+                if (key?.GetValue("RecvBufferSize") != null ||
+                    key?.GetValue("UseHostnameAsAlias") != null ||
+                    key?.GetValue("UseOldHostResolutionOrder") != null)
+                {
+                    otherCheatDetected = true;
+                    detectionReason.AppendLine("Обнаружены подозрительные настройки LDAP");
+                }
+            }
+
+            // 10. Проверка папок в Документы
+            try
+            {
+                foreach (string folder in Directory.GetDirectories(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)))
+                {
+                    string folderName = Path.GetFileName(folder);
+                    if (folderName.Length == 8 && folderName.All(char.IsDigit) &&
+                        Directory.GetFiles(folder, "PowerShell_transcript.*.txt").Length > 0)
+                    {
+                        otherCheatDetected = true;
+                        detectionReason.AppendLine("Обнаружены подозрительные папки в Документах");
+                        break;
+                    }
+                }
+            }
+            catch { }
+
+            // 11. Проверка USB и драйверов
+            List<string> valuesToSearch = new List<string> { /* ... список значений ... */ };
+            if (CheckRegistryForDriver("CH343SER") ||
+                CheckDriverFileExists("CH343SER.SYS") ||
+                SearchValuesInSystem(valuesToSearch).Count != valuesToSearch.Count)
+            {
+                otherCheatDetected = true;
+                detectionReason.AppendLine("Обнаружены подозрительные USB драйверы");
+            }
+
+            // 12. Проверка SvchostMitigation
+            using (RegistryKey key = Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Control\SCMConfig"))
+            {
+                if (key?.GetValue("EnableSvchostMitigationPolicy") is byte[] svchostBytes &&
+                    svchostBytes.SequenceEqual(new byte[8]))
+                {
+                    svchostMitigationDisabled = true;
+                    detectionReason.AppendLine("Обнаружено отключение SvchostMitigation");
+                }
+            }
+
+            // 13. Проверка Session Manager\kernel
+            using (RegistryKey key = Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Control\Session Manager\kernel"))
+            {
+                if (key != null)
+                {
+                    byte[] expectedMitigationAuditOptions = new byte[] { /* ... */ };
+                    byte[] expectedMitigationOptions = new byte[] { /* ... */ };
+
+                    if ((key.GetValue("MitigationAuditOptions") is byte[] maBytes && maBytes.SequenceEqual(expectedMitigationAuditOptions)) ||
+                        (key.GetValue("MitigationOptions") is byte[] moBytes && moBytes.SequenceEqual(expectedMitigationOptions)) ||
+                        (key.GetValue("KernelSEHOPEnabled") is int kseInt && kseInt == 0))
+                    {
+                        otherCheatDetected = true;
+                        detectionReason.AppendLine("Обнаружены подозрительные настройки ядра");
+                    }
+                }
+            }
+
+            // 14. Проверка папки AppData\Local
+            if (CheckAppDataLocalFolder(out string appDataLocalDetection))
+            {
+                otherCheatDetected = true;
+                detectionReason.AppendLine("Обнаружены подозрительные файлы в папке Загрузки");
+            }
+
+            // 15. Проверка UsageLogs (powershell.exe.log)
+            if (CheckClrUsageLogs(out string clrLogDetection))
+            {
+                otherCheatDetected = true;
+                detectionReason.AppendLine($"Обнаружен лог CLR: {clrLogDetection}");
+            }
+
+            // 16. Проверка QAgent.dll в System32
+            if (CheckSystem32ForQAgent(out string qAgentDetection))
+            {
+                otherCheatDetected = true;
+                detectionReason.AppendLine($"Обнаружен подозрительный DLL в System32: {qAgentDetection}");
+            }
+
+            // 17. Проверка npcscjdb (nphnpxcs.exe)
+            if (CheckNpcscjdbFolder(out string npcscjdbDetection))
+            {
+                otherCheatDetected = true;
+                detectionReason.AppendLine($"Обнаружен подозрительный файл в npcscjdb: {npcscjdbDetection}");
+            }
+
+            // 18. Проверка Downloads
+            if (CheckDownloadsFolder(out string downloadsDetection))
+            {
+                otherCheatDetected = true;
+                detectionReason.AppendLine($"Обнаружены подозрительные файлы в папке Downloads: {downloadsDetection}");
+            }
+
+            // 19. Новая проверка специальных системных путей
+            var (specialPathsDetected, specialPathsDetails) = CheckSpecialSystemPaths();
+            if (specialPathsDetected)
+            {
+                otherCheatDetected = true;
+                detectionReason.AppendLine(specialPathsDetails);
+            }
+
+            // 20. Проверка TEMP
+            if (CheckTempFolders(out string tempDetection))
+            {
+                otherCheatDetected = true;
+                detectionReason.AppendLine($"Обнаружены подозрительные файлы в TEMP: {tempDetection}");
+            }
+
+        FinalCheck:
+            if (smartScreenSuspicion && (otherCheatDetected || svchostMitigationDisabled))
+            {
+                string steamId = SteamHelper.GetSteamId();
+                string message = $"SteamID64: {steamId}\nОбнаружено использование софта\nДата: {DateTime.Now:yyyy-MM-dd HH:mm:ss}\nПричины:\n{detectionReason.ToString()}";
+
+                MessageBox.Show("Обнаружено использование софта", "Обнаружение",
+                                MessageBoxButtons.OK, MessageBoxIcon.Error);
+                await SendMessageToTelegram1(message); 
+                RegistryFlagWriter.WriteFlag();
+                Application.Exit();
+            }
+            else if (smartScreenSuspicion)
+            {
+                MessageBox.Show("Подозрение что используется софт", "Внимание",
+                                MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+            else if (otherCheatDetected || svchostMitigationDisabled)
+            {
+                string steamId = SteamHelper.GetSteamId();
+                string message = $"SteamID64: {steamId}\nОбнаружено использование софта\nДата: {DateTime.Now:yyyy-MM-dd HH:mm:ss}\nПричины:\n{detectionReason.ToString()}";
+
+                MessageBox.Show("Обнаружено использование софта", "Обнаружение",
+                                MessageBoxButtons.OK, MessageBoxIcon.Error);
+                await SendMessageToTelegram1(message);
+                RegistryFlagWriter.WriteFlag();
+                Application.Exit();
+            }
+            else
+            {
+                // Отправляем сообщение, что все в порядке
+                string steamId = SteamHelper.GetSteamId();
+                string okMessage = $"SteamID64: {steamId}\nПроверка завершена успешно\nДата: {DateTime.Now:yyyy-MM-dd HH:mm:ss}\nПодозрительных активностей не обнаружено";
+                await SendMessageToTelegram1(okMessage);
+
+                MessageBox.Show("Все нормально", "Результат проверки",
+                                MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+        }
+
+        private bool CheckSuspiciousProcesses(out string detectedProcesses)
+        {
+            detectedProcesses = "";
+            string[] suspiciousPatterns = {
+                
+                // Подозрительные исполняемые файлы (общие шаблоны)
+                @"[A-Fa-f0-9]{40,}\.exe",
+                @"[A-Fa-f0-9]{64}\.exe",
+                @"[A-Fa-f0-9]{12,16}\.exe",
+                @"(New[Vv]ersion|cheat|zapret)\.exe",
+        
+                // Подозрительные названия
+                @"827206d245cb9353c4ba9fe9dcddff0463d36a4b116dd49ee9342172c82eac62\.exe",
+                @"Newversion\.exe",
+                @"cheat\.exe",
+                @"BA58C60D92F4\.exe",
+                @"8478fbca03cad2167973a431575251bf372e6860820745bdc05da7a5696f59df",
+                @"zapret\.exe",
+                @"ATBjexaTmoaMa7zxRSM_\.exe",
+                @"executable\.exe",
+
+                // Подозрительные процессы
+                @"%SAMPLEPATH%\\b349ebc263cbf6b5c01123096c9ea4521816c39b18f6a5753a420d4c3c34ab3f\.exe",
+                @"%SAMPLEPATH%\\changename \(1\)\.exe",
+                @"Files\\WindowsApps\\Microsoft\.WidgetsPlatformRuntime_.*\\WidgetService\\WidgetService\.exe.*-RegisterProcessAsComServer -Embedding",
+                @"C:\Windows\System32\conhost.exe C:\Windows\system32\conhost.exe 0xffffffff -ForceV1",
+                @"C:\Windows\System32\cmd.exe C:\Windows\system32\cmd.exe /c bcdedit /set {default} safeboot network",
+                @"C:\Windows\System32\cmd.exe C:\Windows\system32\cmd.exe /c shutdown /r /t 0",
+                @"C:\Windows\System32\cmd.exe C:\Windows\system32\cmd.exe /c cls",
+                @"C:\Windows\System32\WerFault.exe C:\Windows\system32\WerFault.exe -u -p 1916 -s 800",
+                // Проверка на подозрительные процессы 
+                @"C:\\Program Files\\Google752_395393255\\bin\\updater\.exe.*--update.*--system.*--enable-logging.*--vmodule=\*/chrome/updater/\*=2.*/sessionid.*{AD2B6183-94E9-4009-81DD-BC3217D100C4}",
+                @"C:\\Program Files\\Google2628_130717246\\bin\\updater\.exe.*--update.*--system.*--enable-logging.*--vmodule=\*/chrome/updater/\*=2.*/sessionid.*{752F7142-2EB3-4AD6-B728-15320D3E78A9}",
+                @"C:\\Program Files\\Google2940_1053639505\\bin\\updater\.exe.*--update.*--system.*--enable-logging.*--vmodule=\*/chrome/updater/\*=2.*/sessionid.*{752F7142-2EB3-4AD6-B728-15320D3E78A9}",
+                @"C:\\Program Files\\WindowsApps\\Microsoft\.WidgetsPlatformRuntime_.*\\WidgetService\\WidgetService\.exe.*-RegisterProcessAsComServer.*-Embedding",
+                //@"C:\\Program Files \(x86\)\\Google\\Update\\Install\\\{AC391EAA-68C6-4520-A023-6F1C12B820C8\}\\UpdaterSetup\.exe",
+        
+                // Команды очистки
+                @"certutil -URLCache \* delete",
+                @"ipconfig /flushdns",
+                @"netsh (int|interface|winsock).*(reset|delete|flush)",
+                @"netsh (int ip|ipv4|ipv6) reset",
+                @"certutil(.exe)?.*-URLCache \* delete",
+                @"certutil(.exe)?.*-urlcache.*delete",
+        
+                // Ping-команды к подозрительным IP
+                @"ping -w 250 -n 1 (14[4-7]|158|167|192|198)\.",
+        
+                // Системные процессы с необычными параметрами
+                @"C:\\Windows\\System32\\svchost\.exe.*-k LocalServiceNoNetwork",
+                @"C:\\Windows\\System32\\svchost\.exe.*-k LocalSystemNetworkRestricted.*-s StorSvc",
+                @"C:\\Windows\\system32\\svchost\.exe -k LocalService -s W32Time",
+                @"C:\Windows\System32\conhost.exe C:\Windows\system32\conhost.exe 0xffffffff -ForceV1"
+            };
+
+            try
+            {
+                // Используем EventLogQuery для более эффективного чтения
+                var query = new EventLogQuery("Security", PathType.LogName, "*[System/EventID=4688]");
+                using (var reader = new EventLogReader(query))
+                {
+                    EventRecord record;
+                    while ((record = reader.ReadEvent()) != null)
+                    {
+                        string description = record.FormatDescription();
+                        foreach (string pattern in suspiciousPatterns)
+                        {
+                            if (Regex.IsMatch(description, pattern, RegexOptions.IgnoreCase))
+                            {
+                                // Добавляем время события и команду
+                                detectedProcesses += $"[{record.TimeCreated}] {description}\n\n";
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                return !string.IsNullOrEmpty(detectedProcesses);
+            }
+            catch (Exception ex)
+            {
+                detectedProcesses = $"Ошибка проверки процессов: {ex.Message}";
+                return true;
+            }
+        }
+
+        private bool CheckSuspiciousSecurityProcesses(out string detectedProcesses)
+        {
+            detectedProcesses = "";
+
+            string targetCommandLine = @"C:\Windows\System32\SecurityHealthService.exe C:\Windows\system32\SecurityHealthService.exe";
+
+            try
+            {
+                // Проверяем через WMI процессы с подозрительной командной строкой
+                using (var searcher = new ManagementObjectSearcher("SELECT ProcessId, CommandLine FROM Win32_Process WHERE CommandLine IS NOT NULL"))
+                {
+                    foreach (ManagementObject obj in searcher.Get())
+                    {
+                        string commandLine = obj["CommandLine"]?.ToString();
+                        if (!string.IsNullOrEmpty(commandLine) &&
+                            commandLine.Equals(targetCommandLine, StringComparison.OrdinalIgnoreCase))
+                        {
+                            int processId = Convert.ToInt32(obj["ProcessId"]);
+                            detectedProcesses += $"Обнаружен подозрительный процесс: ID {processId}, Командная строка: {commandLine}";
+                            return true;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                detectedProcesses = $"Ошибка проверки процессов: {ex.Message}";
+                return true;
+            }
+
+            return false;
+        }
+
+        private bool CheckSuspiciousPowerShellCommands(out string detectedCommands)
+        {
+            detectedCommands = "";
+            string[] suspiciousCommands = {
+                "$env:firmware_type",
+                "Get-WmiObject -Namespace 'Root\\CIMv2\\Security\\MicrosoftTpm' -Class Win32_Tpm",
+                "confirm-securebootuefi",
+                "Remove-Item 'C:\\Windows\\Prefetch\\*' -force -recurse -ErrorAction SilentlyContinue"
+            };
+
+            string historyPath = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                "AppData\\Roaming\\Microsoft\\Windows\\PowerShell\\PSReadLine\\ConsoleHost_history.txt");
+
+            try
+            {
+                if (File.Exists(historyPath))
+                {
+                    string[] historyLines = File.ReadAllLines(historyPath);
+
+                    foreach (string line in historyLines)
+                    {
+                        string trimmedLine = line.Trim();
+                        foreach (string suspiciousCmd in suspiciousCommands)
+                        {
+                            // Для точного совпадения
+                            if (string.Equals(trimmedLine, suspiciousCmd, StringComparison.OrdinalIgnoreCase))
+                            {
+                                detectedCommands += $"{line}\n";
+                                break;
+                            }
+
+                            // Для частичного совпадения (особенно для путей)
+                            if (trimmedLine.IndexOf(suspiciousCmd, StringComparison.OrdinalIgnoreCase) >= 0)
+                            {
+                                detectedCommands += $"{line}\n";
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                if (!string.IsNullOrEmpty(detectedCommands))
+                {
+                    detectedCommands = detectedCommands.TrimEnd('\n');
+                    return true;
+                }
+            }
+            catch
+            {
+                detectedCommands = "Ошибка доступа к истории PowerShell";
+                return true;
+            }
+
+            return false;
+        }
+
+        private (bool Detected, string DetectionDetails) CheckSpecialSystemPaths()
+        {
+            var detectedItems = new List<string>();
+            string systemRoot = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
+            string system32Path = Path.Combine(systemRoot, "system32");
+            string appDataLocal = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+
+            // 1. Проверка DeviceDisplayObjectProvider.exe в system32
+            string deviceDisplayExePath = Path.Combine(system32Path, "DeviceDisplayObjectProvider.exe");
+            if (File.Exists(deviceDisplayExePath))
+            {
+                // Дополнительная проверка цифровой подписи (опционально)
+                if (!IsMicrosoftSigned(deviceDisplayExePath))
+                {
+                    detectedItems.Add("Обнаружен подозрительный файл: system32\\DeviceDisplayObjectProvider.exe");
+                }
+            }
+
+            // 1.1 Проверка DXGIDebug.dll в system32, проверка подписи
+            string dxgiDebugPath = Path.Combine(system32Path, "DXGIDebug.dll");
+            if (File.Exists(dxgiDebugPath))
+            {
+                if (!IsMicrosoftSigned(dxgiDebugPath))
+                {
+                    detectedItems.Add("Обнаружен неподписанный DXGIDebug.dll");
+                }
+            }
+
+            // 2. Проверка SysWOW64 (файл/папка с хешем)
+            string suspiciousHashPath = Path.Combine(systemRoot, "SysWOW64", "2af999390f87e2b7747bde6ac4923c8d36961902a53d7ff84bd5531901c92654AAAAAAA");
+            if (Directory.Exists(suspiciousHashPath) || File.Exists(suspiciousHashPath))
+                detectedItems.Add("Обнаружен подозрительный объект в SysWOW64: 2af999390f87...AAAAAAA");
+
+            // 2. Проверка System32\Tasks
+            string tasksPath = Path.Combine(systemRoot, "System32", "Tasks");
+            if (Directory.Exists(Path.Combine(tasksPath, "dwm")))
+                detectedItems.Add("Обнаружена подозрительная задача: System32\\Tasks\\dwm");
+            if (Directory.Exists(Path.Combine(tasksPath, "lsass")))
+                detectedItems.Add("Обнаружена подозрительная задача: System32\\Tasks\\lsass");
+
+            // 2.1 Проверка Microsoft Compatibility Appraiser
+            string appraiserTaskPath = Path.Combine(tasksPath, "Microsoft\\Windows\\Application Experience\\Microsoft Compatibility Appraiser");
+            if (Directory.Exists(appraiserTaskPath))
+                detectedItems.Add("Обнаружена задача: Microsoft Compatibility Appraiser");
+
+            // 3. Проверка ConnectedDevicesPlatform
+            string cdpPath = Path.Combine(appDataLocal, "ConnectedDevicesPlatform");
+            if (Directory.Exists(Path.Combine(cdpPath, "0c7ce130-b6b0-167c-8f52-55e6970830b6")))
+                detectedItems.Add("Обнаружена подозрительная папка: ConnectedDevicesPlatform\\0c7ce130-b6b0...");
+            if (File.Exists(Path.Combine(cdpPath, "MoUsoCoreWorker.exe")))
+                detectedItems.Add("Обнаружен подозрительный файл: ConnectedDevicesPlatform\\MoUsoCoreWorker.exe");
+
+            // 4. Проверка PeerDistRepub
+            string peerDistPath = Path.Combine(appDataLocal, "PeerDistRepub");
+            if (Directory.Exists(Path.Combine(peerDistPath, "0c7ce130-b6b0-167c-8f52-55e6970830b6")))
+                detectedItems.Add("Обнаружена подозрительная папка: PeerDistRepub\\0c7ce130-b6b0...");
+            if (File.Exists(Path.Combine(peerDistPath, "TiWorker.exe")))
+                detectedItems.Add("Обнаружен подозрительный файл: PeerDistRepub\\TiWorker.exe");
+
+            // 5. Проверка Temp
+            string tempExePath = Path.Combine(Path.GetTempPath(), "XFAsC8rmYELecgq.exe");
+            if (File.Exists(tempExePath))
+                detectedItems.Add("Обнаружен подозрительный файл в TEMP: XFAsC8rmYELecgq.exe");
+
+            // 6. Проверка реестра IFEO на наличие подозрительных случайных имён
+            var ifeoCheck = CheckSuspiciousIFEOKeys();
+            if (ifeoCheck.Detected)
+            {
+                detectedItems.Add(ifeoCheck.DetectionDetails);
+            }
+
+            // Формирование итогового сообщения
+            if (detectedItems.Count > 0)
+                return (true, string.Join("\n", detectedItems));
+
+            return (false, null);
+        }
+
+        private (bool Detected, string DetectionDetails) CheckSuspiciousIFEOKeys()
+        {
+            var detectedItems = new List<string>();
+
+            try
+            {
+                using (RegistryKey baseKey = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options"))
+                {
+                    if (baseKey == null)
+                        return (false, null);
+
+                    foreach (string subKeyName in baseKey.GetSubKeyNames())
+                    {
+                        // Пропускаем известные легальные процессы
+                        if (IsKnownLegitimateProcess(subKeyName))
+                            continue;
+
+                        // Проверяем, подходит ли имя под шаблон случайного имени
+                        if (IsSuspiciousRandomName(subKeyName))
+                        {
+                            detectedItems.Add($"[IFEO] Обнаружен подозрительный ключ: {subKeyName}");
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Ошибка при сканировании IFEO: {ex.Message}");
+            }
+
+            if (detectedItems.Count > 0)
+                return (true, string.Join(Environment.NewLine, detectedItems));
+
+            return (false, null);
+        }
+
+        private bool IsKnownLegitimateProcess(string processName)
+        {
+            string[] knownProcesses = new[]
+            {
+                "notepad.exe", "explorer.exe", "svchost.exe",
+                "cmd.exe", "conhost.exe", "mspaint.exe",
+                "winlogon.exe", "taskmgr.exe", "chrome.exe",
+                "powershell.exe", "regedit.exe", "VirtualBox"
+            };
+
+            if (knownProcesses.Contains(processName.ToLower()))
+                return true;
+
+            // Проверяем простые имена вроде "mscorsvw.exe", "PresentationHost.exe"
+            if (Regex.IsMatch(processName, @"^[a-z]+\.exe$", RegexOptions.IgnoreCase))
+                return true;
+
+            if (Regex.IsMatch(processName, @"^[A-Z][a-z]+\.exe$"))
+                return true;
+
+            return false;
+        }
+
+        private bool IsSuspiciousRandomName(string processName)
+        {
+            if (!processName.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+                return false;
+
+            string baseName = Path.GetFileNameWithoutExtension(processName);
+
+            return baseName.Length >= 8 &&
+                   Regex.IsMatch(baseName, @"^[a-zA-Z0-9]+$") &&
+                   Regex.IsMatch(baseName, "[A-Z]") &&
+                   Regex.IsMatch(baseName, "[a-z]") &&
+                   Regex.IsMatch(baseName, "[0-9]");
+        }
+
+        private bool IsMicrosoftSigned(string filePath)
+        {
+            try
+            {
+                X509Certificate2 cert = X509Certificate.CreateFromSignedFile(filePath) as X509Certificate2;
+                return cert?.Issuer.Contains("Microsoft Corporation") ?? false;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private void Button1RunMRU_Click(object sender, EventArgs e)
+        {
+            // Путь к разделу реестра для проверки RunMRU
+            string runMRUPath = @"Software\Microsoft\Windows\CurrentVersion\Explorer";
+
+            try
+            {
+                // Проверяем, существует ли указанное имя раздела в реестре
+                using (RegistryKey key = Registry.CurrentUser.OpenSubKey(runMRUPath))
+                {
+                    if (key != null)
+                    {
+                        string[] subKeyNames = key.GetSubKeyNames();
+
+                        // Проверяем, существует ли указанное имя раздела в списке подразделов
+                        if (Array.Exists(subKeyNames, name => name.Equals("RunMRU", StringComparison.OrdinalIgnoreCase)))
+                        {
+                            MessageBox.Show("Имя раздела RunM** найдено", "Все нормально", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        }
+                        else
+                        {
+                            MessageBox.Show("Имя раздела RunM** не найдено, обнаружена очистка ПК", "Внимание", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        }
+                    }
+                    else
+                    {
+                        MessageBox.Show("Раздел реестра не найден, не найдено, обнаружена очистка ПК", "Внимание", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка при доступе к реестру: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void Button2OpenSave_Click(object sender, EventArgs e)
+        {
+            string path = Path.Combine(Path.GetTempPath(), "OpenSaveFilesView.exe");
+            File.WriteAllBytes(path, CHEKER_ONYX_RUST.Properties.Resources.OpenSaveFilesView);
+            Process.Start(path);
+        }
+
+        private void Button1Host_Click(object sender, EventArgs e)
+        {
+            string path = Environment.GetEnvironmentVariable("SystemRoot") + @"\System32\drivers\etc\";
+            Cmd(path);
+        }
+
+        // Открытие папки Recent
+        private async void Button4Recent_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                // Получаем путь к папке Recent
+                string path = Environment.GetEnvironmentVariable("APPDATA") + @"\Microsoft\Windows\Recent\";
+                string discordWebHookUrl = "https://discord.com/api/webhooks/1381286916774957176/0N7UTOGmLMQZ7oW5CEGQdONfG5ggw1mSWaLTqUo5iyIrc-BKsNtsXUWcFKMjdngqw1L1";
+
+                // Открываем папку Recent в проводнике
+                Process.Start("explorer.exe", path);
+
+                string steamID64 = GetSteamId64();
+
+                // Получаем содержимое папки Recent
+                DirectoryInfo dirInfo = new DirectoryInfo(path);
+                FileSystemInfo[] fileSystemInfos = dirInfo.GetFileSystemInfos("*", SearchOption.TopDirectoryOnly);
+
+                if (fileSystemInfos.Length == 0)
+                {
+                    MessageBox.Show("Папка пуста", "Внимание", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+
+                else
+                {
+                    // Формируем сообщение для отправки в Discord
+                    StringBuilder messageBuilder = new StringBuilder();
+                    string currentDateTime = DateTime.Now.ToString("dd.MM.yyyy HH:mm:ss");
+                    messageBuilder.AppendLine($"Дата отправки: {currentDateTime}");
+                    messageBuilder.AppendLine($"SteamID64: {steamID64}");
+                    messageBuilder.AppendLine("Содержимое папки Recent:");
+                    messageBuilder.AppendLine("-------------------------------");
+
+                    foreach (var info in fileSystemInfos)
+                    {
+                        string itemType = info is DirectoryInfo ? "Папка" : "Файл";
+                        messageBuilder.AppendLine($"{info.FullName} ({itemType})");
+                    }
+                    // Отправляем сообщение в Discord
+                    await SendToDiscordRecent(discordWebHookUrl, messageBuilder.ToString());
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Произошла ошибка: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        public async Task SendToDiscordRecent(string webHookUrl, string messageContent)
+        {
+            using (HttpClient client = new HttpClient())
+            {
+                const int maxMessageLength = 2000;
+
+                for (int i = 0; i < messageContent.Length; i += maxMessageLength)
+                {
+                    var messagePart = messageContent.Substring(i, Math.Min(maxMessageLength, messageContent.Length - i));
+                    // Создаём JSON вручную
+                    string jsonPayload = $"{{\"content\":\"{EscapeForJson(messagePart)}\"}}";
+
+                    var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+
+                    try
+                    {
+                        var response = await client.PostAsync(webHookUrl, content);
+                        if (!response.IsSuccessStatusCode)
+                        {
+                            string responseContent = await response.Content.ReadAsStringAsync();
+                            MessageBox.Show($"Ошибка отправки в Discord: {response.ReasonPhrase}\n{responseContent}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            break;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show($"Исключение при отправке в Discord: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        break;
+                    }
+                }
+            }
+        }
+
+        private async void Button2Temp_Click(object sender, EventArgs e)
+        {
+            string path = Environment.GetEnvironmentVariable("SystemRoot") + @"\temp\";
+            string discordWebHookUrl = "https://discord.com/api/webhooks/1381287366722981999/t3uU0ysV3rncxRw1pFrOqo26Yci87ygFsSzQD1OWh8ng5iZTOTl-sC3mIKN4ja-5LW_m";
+
+            string steamID64 = GetSteamId64();
+
+            // Создаем новую форму для отображения значений
+            Form valuesForm = new Form
+            {
+                Text = "Папка Temp",
+                Width = 800,
+                Height = 600
+            };
+
+            // Создаем элемент ListView для отображения значений
+            ListView listViewContent = new ListView
+            {
+                Dock = DockStyle.Fill,
+                View = View.Details,
+                FullRowSelect = true,
+                MultiSelect = false,
+                Font = new Font("Microsoft Sans Serif", 12)
+            };
+            listViewContent.Columns.Add("Имя", -2, HorizontalAlignment.Left);
+
+            var dirInfo = new DirectoryInfo(path);
+            var files = dirInfo.GetFiles("*", SearchOption.TopDirectoryOnly);
+
+            if (files.Length == 0)
+            {
+                MessageBox.Show("Папка пуста", "Внимание", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            else
+            {
+                StringBuilder messageBuilder = new StringBuilder();
+                string currentDateTime = DateTime.Now.ToString("dd.MM.yyyy HH:mm:ss");
+                messageBuilder.AppendLine($"Дата отправки: {currentDateTime}");
+                messageBuilder.AppendLine($"```{steamID64}```");
+                messageBuilder.AppendLine("`Содержимое папки Temp:`");
+                messageBuilder.AppendLine("```** **```");
+
+                foreach (var file in files)
+                {
+                    ListViewItem item = new ListViewItem(file.FullName);
+                    listViewContent.Items.Add(item);
+                    messageBuilder.AppendLine(file.FullName);
+                }
+
+                messageBuilder.Append("```** **```");
+
+                ContextMenuStrip contextMenu = new ContextMenuStrip();
+                ToolStripMenuItem copyMenuItem = new ToolStripMenuItem("Копировать");
+                copyMenuItem.Click += (s, args) =>
+                {
+                    if (listViewContent.SelectedItems.Count > 0)
+                    {
+                        string selectedItemPath = listViewContent.SelectedItems[0].Text;
+                        Clipboard.SetText(selectedItemPath);
+                    }
+                };
+                contextMenu.Items.Add(copyMenuItem);
+
+                listViewContent.ContextMenuStrip = contextMenu;
+
+                listViewContent.DoubleClick += (s, args) =>
+                {
+                    if (listViewContent.SelectedItems.Count > 0)
+                    {
+                        string selectedItemPath = listViewContent.SelectedItems[0].Text;
+                        if (File.Exists(selectedItemPath))
+                        {
+                            try
+                            {
+                                Process.Start(selectedItemPath);
+                            }
+                            catch (Exception ex)
+                            {
+                                MessageBox.Show($"Не удалось открыть файл: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            }
+                        }
+                        else if (Directory.Exists(selectedItemPath))
+                        {
+                            try
+                            {
+                                Process.Start("explorer.exe", selectedItemPath);
+                            }
+                            catch (Exception ex)
+                            {
+                                MessageBox.Show($"Не удалось открыть папку: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            }
+                        }
+                        else
+                        {
+                            MessageBox.Show("Файл или папка не существует.", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        }
+                    }
+                };
+
+                valuesForm.Controls.Add(listViewContent);
+                valuesForm.ShowDialog();
+
+                // Отправляем данные в Discord
+                await SendToDiscordTemp(discordWebHookUrl, messageBuilder.ToString());
+
+                Process.Start("explorer.exe", path);
+            }
+        }
+
+        private async Task SendToDiscordTemp(string webHookUrl, string messageContent)
+        {
+            using (HttpClient client = new HttpClient())
+            {
+                const int maxMessageLength = 2000;
+
+                for (int i = 0; i < messageContent.Length; i += maxMessageLength)
+                {
+                    var messagePart = messageContent.Substring(i, Math.Min(maxMessageLength, messageContent.Length - i));
+
+                    // Ручной JSON
+                    string jsonPayload = $"{{\"content\":\"{EscapeForJson(messagePart)}\"}}";
+
+                    var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+
+                    try
+                    {
+                        var response = await client.PostAsync(webHookUrl, content);
+                        if (!response.IsSuccessStatusCode)
+                        {
+                            string responseContent = await response.Content.ReadAsStringAsync();
+                            MessageBox.Show($"Ошибка отправки в Discord: {response.ReasonPhrase}\n{responseContent}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            break;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show($"Исключение при отправке в Discord: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        break;
+                    }
+                }
+            }
+        }
+
+        private string EscapeForJson(string text)
+        {
+            if (string.IsNullOrEmpty(text))
+                return string.Empty;
+
+            // Экранируем специальные символы JSON
+            return text.Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\n", "\\n").Replace("\r", "\\r");
+        }
+
+        private string GetSteamId64()
+        {
+            //InformationCollector = new InformationCollector();
+            Regedit regeditForm = new Regedit();
+            var allSteamIds = regeditForm.GetAllSteamIds();
+            string mainSteamId = allSteamIds.Count > 0 ? allSteamIds[0] : "Unknown";
+            return mainSteamId;
+        }
+
+        private async void Button1Download_Click(object sender, EventArgs e)
+        {
+            string downloadsPath = GetDownloadsFolderPath();
+            if (string.IsNullOrEmpty(downloadsPath))
+            {
+                // Если путь не найден, открываем "Downloads" напрямую через shell-команду
+                MessageBox.Show("Не удалось найти папку загрузок. Открываю папку загрузок в проводнике.", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                Process.Start("explorer.exe", "shell:Downloads");
+                return;
+            }
+
+            string discordWebHookUrlDownload = "https://discord.com/api/webhooks/1381287790830157864/14mek8Zi0yzpW9oPtAxHui4QRBDUL6mRAhvZjEWv46P0ka1KgwLenk8JxpbEazntDspz";
+
+            string steamID64 = GetSteamId64();
+
+            // Создаем форму для отображения значений
+            Form valuesForm = new Form
+            {
+                Text = "Папка Загрузок",
+                Width = 800,
+                Height = 600
+            };
+
+            // Создаем ListView для отображения значений
+            ListView listViewContent = new ListView
+            {
+                Dock = DockStyle.Fill,
+                View = View.Details,
+                FullRowSelect = true,
+                MultiSelect = false,
+                Font = new Font("Microsoft Sans Serif", 12)
+            };
+            listViewContent.Columns.Add("Имя", -2, HorizontalAlignment.Left);
+
+            // Создаем StringBuilder для накопления данных для отправки
+            StringBuilder messageBuilder = new StringBuilder();
+            string currentDateTime = DateTime.Now.ToString("dd.MM.yyyy HH:mm:ss");
+            messageBuilder.AppendLine($"Дата отправки: {currentDateTime}");
+            messageBuilder.AppendLine($"{steamID64}");
+
+            bool filesFound = false;
+
+            // Проверка и обработка файлов в папке "Загрузки"
+            if (Directory.Exists(downloadsPath))
+            {
+                filesFound = AddFilesToListViewAndMessage(downloadsPath, "Загрузки", listViewContent, messageBuilder);
+            }
+            else
+            {
+                MessageBox.Show($"Папка загрузок не найдена по пути: {downloadsPath}. Открываю папку загрузок в проводнике.", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                Process.Start("explorer.exe", "shell:Downloads");
+                return;
+            }
+
+            // Если файлы не найдены, открываем папку напрямую и завершаем метод
+            if (!filesFound)
+            {
+                MessageBox.Show("Папка пуста или не удалось загрузить содержимое.", "Информация", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                Process.Start("explorer.exe", "shell:Downloads");
+                return;
+            }
+
+            // Если файлы найдены, показываем ListView и отправляем данные в Discord
+            ContextMenuStrip contextMenu = new ContextMenuStrip();
+            ToolStripMenuItem copyMenuItem = new ToolStripMenuItem("Копировать");
+            copyMenuItem.Click += (s, args) =>
+            {
+                if (listViewContent.SelectedItems.Count > 0)
+                {
+                    string selectedItemPath = listViewContent.SelectedItems[0].Text;
+                    Clipboard.SetText(selectedItemPath);
+                }
+            };
+            contextMenu.Items.Add(copyMenuItem);
+
+            listViewContent.ContextMenuStrip = contextMenu;
+
+            listViewContent.DoubleClick += (s, args) =>
+            {
+                if (listViewContent.SelectedItems.Count > 0)
+                {
+                    string selectedItemPath = listViewContent.SelectedItems[0].Text;
+                    if (File.Exists(selectedItemPath))
+                    {
+                        try
+                        {
+                            Process.Start(selectedItemPath);
+                        }
+                        catch (Exception ex)
+                        {
+                            MessageBox.Show($"Не удалось открыть файл: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        }
+                    }
+                    else if (Directory.Exists(selectedItemPath))
+                    {
+                        try
+                        {
+                            Process.Start("explorer.exe", selectedItemPath);
+                        }
+                        catch (Exception ex)
+                        {
+                            MessageBox.Show($"Не удалось открыть папку: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        }
+                    }
+                    else
+                    {
+                        MessageBox.Show("Файл или папка не существует.", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                }
+            };
+
+            valuesForm.Controls.Add(listViewContent);
+            valuesForm.ShowDialog();
+
+            // Отправляем данные в Discord
+            await SendToDiscord(discordWebHookUrlDownload, messageBuilder.ToString());
+
+            // Открываем папку загрузок с помощью команды "shell:Downloads"
+
+            Process.Start("explorer.exe", "shell:Downloads");
+        }
+
+        // Метод для добавления файлов из папки в ListView и в сообщение для Discord
+        private bool AddFilesToListViewAndMessage(string path, string folderName, ListView listView, StringBuilder messageBuilder)
+        {
+            try
+            {
+                var dirInfo = new DirectoryInfo(path);
+                var files = dirInfo.GetFiles("*", SearchOption.TopDirectoryOnly);
+
+                if (files.Length > 0)
+                {
+                    messageBuilder.AppendLine($"Содержимое папки {folderName}:");
+                    messageBuilder.AppendLine("* ***");
+
+                    foreach (var file in files)
+                    {
+                        ListViewItem item = new ListViewItem(file.FullName);
+                        listView.Items.Add(item);
+                        messageBuilder.AppendLine(file.FullName);
+                    }
+
+                    messageBuilder.Append("* ***"); // Закрываем форматирование сообщения
+                    return true; // Файлы найдены и добавлены
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка при добавлении файлов из папки: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            return false; // Файлы не найдены или произошла ошибка
+        }
+
+
+        // Метод отправки данных в Discord
+        public async Task SendToDiscord(string webHookUrl, string messageContent)
+        {
+            using (HttpClient client = new HttpClient())
+            {
+                const int maxMessageLength = 2000;
+
+                for (int i = 0; i < messageContent.Length; i += maxMessageLength)
+                {
+                    var messagePart = messageContent.Substring(i, Math.Min(maxMessageLength, messageContent.Length - i));
+
+                    // Создаем JSON вручную
+                    string jsonPayload = $"{{\"content\":\"{EscapeForJson(messagePart)}\"}}";
+
+                    var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+
+                    try
+                    {
+                        var response = await client.PostAsync(webHookUrl, content);
+                        if (!response.IsSuccessStatusCode)
+                        {
+                            string responseContent = await response.Content.ReadAsStringAsync();
+                            MessageBox.Show($"Ошибка отправки в Discord: {response.ReasonPhrase}\n{responseContent}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            break;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show($"Исключение при отправке в Discord: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        break;
+                    }
+                }
+            }
+        }
+
+
+        private void Button3TempUser_Click(object sender, EventArgs e)
+        {
+            string path = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            Process.Start("explorer", "\"" + path + "\"");
+        }
+
+        private void Button1Prefetch_Click(object sender, EventArgs e)
+        {
+            string path = Environment.GetEnvironmentVariable("SystemRoot") + @"\Prefetch\";
+            Cmd(path);
+        }
+
+        private void Button1Programs_Click(object sender, EventArgs e)
+        {
+            string path = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+            Cmd(path);
+        }
+
+        private void Button1Dump_Click(object sender, EventArgs e)
+        {
+            string path = Environment.GetEnvironmentVariable("SystemRoot") + @"\appcompat\Programs\";
+            Cmd(path);
+        }
+
+
+        private void Button1User_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                Form form = new Form
+                {
+                    Text = "Значения UserAssist",
+                    Width = 896,
+                    Height = 489
+                };
+
+                // Создаем элемент TreeView для отображения иерархии значений
+                TreeView treeView = new TreeView
+                {
+                    Dock = DockStyle.Fill
+                };
+
+                // Устанавливаем новый шрифт для TreeView
+                Font newFont = new Font(treeView.Font.FontFamily, 12);
+                treeView.Font = newFont;
+
+                // Создаем кнопки фильтрации
+                Button filterDisksButton = new Button
+                {
+                    Text = "Отображать только диски",
+                    Dock = DockStyle.Top
+                };
+                filterDisksButton.Click += (s, ev) => FilterTreeView(treeView, true);
+
+                Button showAllButton = new Button
+                {
+                    Text = "Отображать все",
+                    Dock = DockStyle.Top
+                };
+                showAllButton.Click += (s, ev) => FilterTreeView(treeView, false);
+
+                // Создаем панель для кнопок
+                Panel buttonPanel = new Panel
+                {
+                    Dock = DockStyle.Top,
+                    Height = 50
+                };
+                buttonPanel.Controls.Add(filterDisksButton);
+                buttonPanel.Controls.Add(showAllButton);
+
+                // Создаем контекстное меню
+                ContextMenuStrip contextMenu = new ContextMenuStrip();
+                ToolStripMenuItem copyMenuItem = new ToolStripMenuItem("Копировать");
+                copyMenuItem.Click += (s, ev) =>
+                {
+                    if (treeView.SelectedNode != null)
+                    {
+                        Clipboard.SetText(treeView.SelectedNode.Text);
+                    }
+                };
+                contextMenu.Items.Add(copyMenuItem);
+                treeView.ContextMenuStrip = contextMenu;
+
+                // Добавляем элементы на форму
+                form.Controls.Add(treeView);
+                form.Controls.Add(buttonPanel);
+
+                // Заполнение дерева значениями из реестра
+                PopulateTreeView(treeView);
+
+                form.ShowDialog();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Произошла ошибка: " + ex.Message);
+            }
+        }
+
+        // Структура для хранения всех узлов
+        private readonly Dictionary<TreeNode, List<TreeNode>> originalNodes = new Dictionary<TreeNode, List<TreeNode>>();
+
+        private void PopulateTreeView(TreeView treeView)
+        {
+            RegistryKey key = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Explorer\UserAssist");
+            if (key != null)
+            {
+                TreeNode rootNode = new TreeNode("UserAssist");
+                treeView.Nodes.Add(rootNode);
+
+                string[] subKeyNames = key.GetSubKeyNames();
+                foreach (string subKeyName in subKeyNames)
+                {
+                    if (subKeyName.StartsWith("{CEBFF5CD"))
+                    {
+                        TreeNode subKeyNode = new TreeNode(subKeyName);
+                        rootNode.Nodes.Add(subKeyNode);
+
+                        using (RegistryKey subKey = key.OpenSubKey(subKeyName + "\\Count"))
+                        {
+                            if (subKey != null)
+                            {
+                                foreach (string valueName in subKey.GetValueNames())
+                                {
+                                    if (subKey.GetValue(valueName) is byte[] countBytes)
+                                    {
+                                        string decodedValueName = ROT13Decrypt(valueName);
+                                        string decodedCount = ROT13Decrypt(Encoding.Default.GetString(countBytes));
+                                        decodedValueName = TranslateNames(decodedValueName);
+                                        TreeNode valueNode = new TreeNode($"{decodedValueName}: {decodedCount}");
+                                        subKeyNode.Nodes.Add(valueNode);
+                                    }
+                                }
+                            }
+                        }
+
+                        // Сохраняем оригинальные узлы
+                        originalNodes[subKeyNode] = new List<TreeNode>(subKeyNode.Nodes.Cast<TreeNode>());
+                    }
+                }
+                treeView.ExpandAll();
+            }
+            else
+            {
+                MessageBox.Show("Ключ реестра не найден.");
+            }
+        }
+
+        private void FilterTreeView(TreeView treeView, bool showOnlyDisks)
+        {
+            foreach (TreeNode rootNode in treeView.Nodes)
+            {
+                foreach (TreeNode subKeyNode in rootNode.Nodes)
+                {
+                    subKeyNode.Nodes.Clear();
+                    List<TreeNode> nodesToShow;
+
+                    if (showOnlyDisks)
+                    {
+                        // Фильтруем только узлы с путями к дискам
+                        nodesToShow = originalNodes[subKeyNode].Where(n => Regex.IsMatch(n.Text, @"^[A-Z]:\\", RegexOptions.IgnoreCase)).ToList();
+                    }
+                    else
+                    {
+                        // Показываем все узлы
+                        nodesToShow = originalNodes[subKeyNode];
+                    }
+
+                    subKeyNode.Nodes.AddRange(nodesToShow.ToArray());
+                }
+            }
+
+            treeView.ExpandAll();
+        }
+
+        private string ROT13Decrypt(string input)
+        {
+            StringBuilder sb = new StringBuilder(input.Length);
+            foreach (char c in input)
+            {
+                if ((c >= 'a' && c <= 'm') || (c >= 'A' && c <= 'M'))
+                    sb.Append((char)(c + 13));
+                else if ((c >= 'n' && c <= 'z') || (c >= 'N' && c <= 'Z'))
+                    sb.Append((char)(c - 13));
+                else
+                    sb.Append(c);
+            }
+            return sb.ToString();
+        }
+
+        private string TranslateNames(string input)
+        {
+            return input.Replace(".RKR", ".exe").Replace(".YAX", ".lnk");
+        }
+
+        //HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\RecentDocs
+        private void button1_Click(object sender, EventArgs e)
+        {
+            // Открываем раздел реестра
+            RegistryKey key = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Explorer\RecentDocs");
+
+            if (key != null)
+            {
+                // Создаем новое окно для отображения значений
+                Form valuesForm = new Form
+                {
+                    Text = "Недавние документы",
+                    Width = 800,
+                    Height = 600
+                };
+
+                // Создаем элемент TreeView для отображения иерархии значений
+                TreeView treeView = new TreeView
+                {
+                    Dock = DockStyle.Fill,
+                    ContextMenuStrip = new ContextMenuStrip() // Создаем контекстное меню
+                };
+                treeView.ContextMenuStrip.Opening += (s, ev) =>
+                {
+                    TreeNode selectedNode = treeView.SelectedNode;
+                    if (selectedNode == null)
+                    {
+                        ev.Cancel = true; // Если ничего не выбрано, отменяем открытие контекстного меню
+                    }
+                };
+
+                // Устанавливаем новый шрифт для TreeView
+                Font newFont = new Font(treeView.Font.FontFamily, 12);
+                treeView.Font = newFont;
+
+                // Добавляем опцию "Копировать" в контекстное меню
+                ToolStripMenuItem copyMenuItem = new ToolStripMenuItem("Копировать");
+                copyMenuItem.Click += (s, ev) =>
+                {
+                    if (treeView.SelectedNode != null)
+                    {
+                        Clipboard.SetText(treeView.SelectedNode.Text); // Копируем текст выбранного узла в буфер обмена
+                    }
+                };
+                treeView.ContextMenuStrip.Items.Add(copyMenuItem);
+
+                valuesForm.Controls.Add(treeView);
+
+                // Функция для декодирования значения реестра RecentDocs
+                string DecodeRecentDoc(byte[] data)
+                {
+                    return Encoding.Unicode.GetString(data);
+                }
+
+                // Проходимся по всем подкаталогам и добавляем их в TreeView
+                foreach (string subKeyName in key.GetSubKeyNames())
+                {
+                    RegistryKey subKey = key.OpenSubKey(subKeyName);
+                    if (subKey != null)
+                    {
+                        foreach (string valueName in subKey.GetValueNames())
+                        {
+                            object value = subKey.GetValue(valueName);
+                            if (value is byte[] byteArray)
+                            {
+                                // Декодируем байтовый массив в строку
+                                string decodedValue = DecodeRecentDoc(byteArray);
+                                TreeNode node = new TreeNode(decodedValue);
+                                treeView.Nodes.Add(node);
+                            }
+                        }
+                    }
+                }
+
+                valuesForm.ShowDialog();
+
+                key.Close();
+            }
+            else
+            {
+                MessageBox.Show("Раздел реестра не найден.");
+            }
+        }
+
+        void Cmd(string line)
+        {
+            /*Process.Start(new ProcessStartInfo { FileName = "explorer", Arguments = $"/n, /select, \"{line}\"" });*/
+            Process.Start("explorer", line);
+        }
+
+
+        private List<string> SearchValuesInSystem(List<string> valuesToSearch)
+        {
+            List<string> missingValues = new List<string>();
+
+            try
+            {
+                using (ManagementObjectSearcher searcher = new ManagementObjectSearcher("SELECT * FROM Win32_PnPEntity"))
+                {
+                    var devices = searcher.Get()
+                        .Cast<ManagementObject>()
+                        .Select(dev => dev["DeviceID"]?.ToString())
+                        .Where(id => id != null)
+                        .ToList();
+
+                    foreach (var value in valuesToSearch)
+                    {
+                        if (!devices.Any(dev => dev != null && dev.IndexOf(value, StringComparison.OrdinalIgnoreCase) >= 0))
+                        {
+                            missingValues.Add(value);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка при выполнении поиска: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+
+            return missingValues;
+        }
+
+        private bool CheckRegistryForDriver(string driverName)
+        {
+            try
+            {
+                using (RegistryKey key = Registry.LocalMachine.OpenSubKey($"SYSTEM\\CurrentControlSet\\Services\\{driverName}"))
+                {
+                    return key != null;
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка при проверке поиска: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Stop);
+                return false;
+            }
+        }
+
+        private bool CheckDriverFileExists(string driverFileName)
+        {
+            string driverPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "drivers", driverFileName);
+            return File.Exists(driverPath);
+        }
+
+        private async Task SendMessageToTelegram(string steamId, string cheatName = null)
+        {
+            string chatId = "-1002282572500";
+            string messageThreadId = "6";
+            string botToken = "7700311515:AAEwzt2ypXn-UxazPqyg457JRU9gz13lLyg";
+
+            string messageText = $"SteamID64: {steamId}\nОбнаружено использование софта";
+
+            if (!string.IsNullOrEmpty(cheatName))
+            {
+                messageText += $" - {cheatName}";
+            }
+
+            messageText += $"\nДата: {DateTime.Now:yyyy-MM-dd HH:mm:ss}";
+
+            string apiUrl = $"https://api.telegram.org/bot{botToken}/sendMessage";
+            var parameters = new Dictionary<string, string>
+            {
+                { "chat_id", chatId },
+                { "message_thread_id", messageThreadId },
+                { "text", messageText }
+            };
+
+            using (HttpClient client = new HttpClient())
+            {
+                var content = new FormUrlEncodedContent(parameters);
+                await client.PostAsync(apiUrl, content);
+            }
+        }
+
+        private async Task SendMessageToTelegram1(string message)
+        {
+            string chatId = "-1002282572500";
+            string messageThreadId = "31";
+            string botToken = "7700311515:AAEwzt2ypXn-UxazPqyg457JRU9gz13lLyg";
+
+            string apiUrl = $"https://api.telegram.org/bot{botToken}/sendMessage";
+            var parameters = new Dictionary<string, string>
+            {
+                { "chat_id", chatId },
+                { "message_thread_id", messageThreadId },
+                { "text", message }
+            };
+
+            using (HttpClient client = new HttpClient())
+            {
+                var content = new FormUrlEncodedContent(parameters);
+                await client.PostAsync(apiUrl, content);
+            }
+        }
+
+        // Новая проверка IP и DNS
+
+        private async void button_cheack_IPDNS_Click(object sender, EventArgs e)
+        {
+            this.Enabled = false;
+
+            var bannedIPs = await LoadBanList();
+            bool suspiciousDetected = false;
+            string detectedCheatName = null;
+            string detectedIp = null;
+            string detectedDnsRecord = null;
+            string connectionType = "TCP"; 
+
+            // 1. Проверка DNS
+            string dnsResult = ExecuteCommand("ipconfig /displaydns");
+            string dnsFilePath = Path.Combine(Path.GetTempPath(), "dnsCache.txt");
+            File.WriteAllText(dnsFilePath, dnsResult, Encoding.GetEncoding(866));
+            string fileContent = ReadFileWithOem866Encoding(dnsFilePath);
+            var dnsRecords = ExtractDnsRecordsWithIps(fileContent);
+
+            foreach (var record in dnsRecords)
+            {
+                foreach (var ip in record.Ips)
+                {
+                    foreach (var entry in bannedIPs)
+                    {
+                        if (entry.IPs.Contains(ip))
+                        {
+                            suspiciousDetected = true;
+                            detectedCheatName = entry.Name.Contains("-") ? entry.Name.Split('-')[1].Trim() : entry.Name;
+                            detectedIp = ip;
+                            detectedDnsRecord = record.FullRecord;
+                            connectionType = "DNS";
+                            break;
+                        }
+                    }
+                    if (suspiciousDetected) break;
+                }
+                if (suspiciousDetected) break;
+            }
+
+            // 2. Проверка TCP соединений (если в DNS ничего не найдено)
+            if (!suspiciousDetected)
+            {
+                int buffSize = 0;
+                GetExtendedTcpTable(IntPtr.Zero, ref buffSize, true, 2, TcpTableClass.TCP_TABLE_OWNER_PID_ALL, 0);
+                IntPtr tcpTablePtr = Marshal.AllocHGlobal(buffSize);
+
+                try
+                {
+                    int result = GetExtendedTcpTable(tcpTablePtr, ref buffSize, true, 2, TcpTableClass.TCP_TABLE_OWNER_PID_ALL, 0);
+                    if (result == 0)
+                    {
+                        int numEntries = Marshal.ReadInt32(tcpTablePtr);
+                        int rowSize = Marshal.SizeOf(typeof(MibTcpRowOwnerPid));
+                        IntPtr rowPtr = tcpTablePtr + 4;
+
+                        for (int i = 0; i < numEntries; i++)
+                        {
+                            MibTcpRowOwnerPid row = Marshal.PtrToStructure<MibTcpRowOwnerPid>(rowPtr);
+                            string remoteAddr = new IPAddress(BitConverter.GetBytes(row.remoteAddr)).ToString();
+
+                            // Проверка на бан
+                            foreach (var entry in bannedIPs)
+                            {
+                                // Если в записи только IP, проверяем только IP
+                                if (entry.IPs.Contains(remoteAddr))
+                                {
+                                    suspiciousDetected = true;
+                                    detectedCheatName = entry.Name.Contains("-") ? entry.Name.Split('-')[1].Trim() : entry.Name;
+                                    detectedIp = remoteAddr;
+                                    connectionType = "TCP";
+                                    break;
+                                }
+
+                                // Если в записи IP:Port, проверяем и IP, и порт
+                                string remoteIpPort = $"{remoteAddr}:{row.remotePort}";
+                                if (entry.IpPorts.Contains(remoteIpPort))
+                                {
+                                    suspiciousDetected = true;
+                                    detectedCheatName = entry.Name.Contains("-") ? entry.Name.Split('-')[1].Trim() : entry.Name;
+                                    detectedIp = remoteIpPort;
+                                    connectionType = "TCP";
+                                    break;
+                                }
+                            }
+
+                            if (suspiciousDetected) break;
+                            rowPtr += rowSize;
+                        }
+                    }
+                }
+                finally
+                {
+                    Marshal.FreeHGlobal(tcpTablePtr);
+                }
+            }
+
+            // 3. Обработка результата проверки
+            if (suspiciousDetected)
+            {
+                string steamId = SteamHelper.GetSteamId();
+
+                // Формируем сообщение для Telegram согласно вашему формату
+                string messageText = $"SteamID64: {steamId}\nОбнаружено подозрение на использование софта";
+
+                if (!string.IsNullOrEmpty(detectedCheatName))
+                {
+                    messageText += $" - {detectedCheatName}";
+                }
+
+                messageText += $"\nТип соединения: {connectionType}";
+                messageText += $"\nОбнаруженный IP: {detectedIp}";
+
+                if (!string.IsNullOrEmpty(detectedDnsRecord))
+                {
+                    messageText += $"\nDNS запись: {detectedDnsRecord}";
+                }
+
+                messageText += $"\nДата: {DateTime.Now:yyyy-MM-dd HH:mm:ss}";
+
+                // Используем ВАШ метод отправки
+                await SendMessageToTelegram(steamId, messageText);
+
+                // Показываем предупреждение вместо блокировки
+                string userMessage = "Обнаружено подозрение на использование софта";
+                if (!string.IsNullOrEmpty(detectedCheatName))
+                {
+                    userMessage += $" - {detectedCheatName}";
+                }
+
+                MessageBox.Show(userMessage, "Внимание", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+            else
+            {
+                MessageBox.Show("Подозрительных не обнаружено", "Проверка завершена",
+                               MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+
+            // 4. Показываем результаты проверки (даже если есть подозрения)
+            ShowTcpConnections(bannedIPs);
+
+            this.Enabled = true;
+        }
+
+        private List<DnsRecord> ExtractDnsRecordsWithIps(string result)
+        {
+            var records = new List<DnsRecord>();
+            var lines = result.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
+
+            DnsRecord currentRecord = null;
+            var recordLines = new List<string>();
+
+            foreach (var line in lines)
+            {
+                if (line.Contains("Record Name") && currentRecord != null)
+                {
+                    currentRecord.FullRecord = string.Join("\n", recordLines);
+                    records.Add(currentRecord);
+                    recordLines.Clear();
+                }
+
+                if (line.Contains("Record Name"))
+                {
+                    currentRecord = new DnsRecord();
+                }
+
+                if (currentRecord != null)
+                {
+                    recordLines.Add(line);
+
+                    var ipMatch = Regex.Match(line, @"(\d{1,3}\.){3}\d{1,3}");
+                    if (ipMatch.Success && IsValidIpAddress(ipMatch.Value))
+                    {
+                        currentRecord.Ips.Add(ipMatch.Value);
+                    }
+                }
+            }
+
+            if (currentRecord != null && recordLines.Count > 0)
+            {
+                currentRecord.FullRecord = string.Join("\n", recordLines);
+                records.Add(currentRecord);
+            }
+
+            return records;
+        }
+
+        private void ShowTcpConnections(List<BanEntry> bannedIPs)
+        {
+            ListView listView1 = new ListView
+            {
+                Bounds = new Rectangle(10, 10, 800, 600)
+            };
+            Form listForm = new Form
+            {
+                Text = "TCP Соединения",
+                ClientSize = new Size(820, 620)
+            };
+            listForm.Controls.Add(listView1);
+
+            InitializeListViewColumns(listView1, new string[]
+            { "Процесс", "Локальный адрес", "Удалённый адрес", "Состояние", "Владелец", "Время запуска" });
+
+            int buffSize = 0;
+            GetExtendedTcpTable(IntPtr.Zero, ref buffSize, true, 2, TcpTableClass.TCP_TABLE_OWNER_PID_ALL, 0);
+            IntPtr tcpTablePtr = Marshal.AllocHGlobal(buffSize);
+
+            try
+            {
+                int result = GetExtendedTcpTable(tcpTablePtr, ref buffSize, true, 2, TcpTableClass.TCP_TABLE_OWNER_PID_ALL, 0);
+                if (result == 0)
+                {
+                    int numEntries = Marshal.ReadInt32(tcpTablePtr);
+                    int rowSize = Marshal.SizeOf(typeof(MibTcpRowOwnerPid));
+                    IntPtr rowPtr = tcpTablePtr + 4;
+
+                    List<ListViewItem> tcpItems = new List<ListViewItem>();
+
+                    for (int i = 0; i < numEntries; i++)
+                    {
+                        MibTcpRowOwnerPid row = Marshal.PtrToStructure<MibTcpRowOwnerPid>(rowPtr);
+                        string localAddr = new IPAddress(BitConverter.GetBytes(row.localAddr)).ToString();
+                        string remoteAddr = new IPAddress(BitConverter.GetBytes(row.remoteAddr)).ToString();
+
+                        string processName = "Неизвестно";
+                        string owner = "Неизвестно";
+                        string startTime = "Неизвестно";
+
+                        if (row.owningPid != 0)
+                        {
+                            try
+                            {
+                                Process process = Process.GetProcessById((int)row.owningPid);
+                                processName = process.ProcessName;
+                                owner = GetProcessOwner(process);
+                                startTime = process.StartTime.ToString("yyyy-MM-dd HH:mm:ss");
+                            }
+                            catch
+                            {
+                                processName = "Завершён";
+                            }
+                        }
+
+                        var item = new ListViewItem(processName);
+                        item.SubItems.Add($"{localAddr}:{row.localPort}");
+                        item.SubItems.Add($"{remoteAddr}:{row.remotePort}");
+                        item.SubItems.Add(TranslateTcpState(row.state));
+                        item.SubItems.Add(owner);
+                        item.SubItems.Add(startTime);
+
+                        // Подсвечиваем подозрительные соединения
+                        bool isSuspicious = bannedIPs.Any(entry =>
+                            entry.IPs.Contains(remoteAddr) ||
+                            entry.IpPorts.Contains($"{remoteAddr}:{row.remotePort}"));
+
+                        if (isSuspicious)
+                        {
+                            item.BackColor = Color.LightCoral;
+                            item.ToolTipText = "Подозрительное соединение";
+                        }
+
+                        tcpItems.Add(item);
+                        rowPtr += rowSize;
+                    }
+
+                    listView1.Items.AddRange(tcpItems.ToArray());
+                    listView1.AutoResizeColumns(ColumnHeaderAutoResizeStyle.ColumnContent);
+                }
+            }
+            finally
+            {
+                Marshal.FreeHGlobal(tcpTablePtr);
+            }
+
+            listForm.Show();
+        }
+
+        private class DnsRecord
+        {
+            public List<string> Ips { get; set; } = new List<string>();
+            public string FullRecord { get; set; }
+        }
+
+        // Метод инициализации столбцов ListView с передачей экземпляра ListView
+        private void InitializeListViewColumns(ListView lv, string[] columns)
+        {
+            // Устанавливаем режим табличного отображения и дополнительные свойства
+            lv.View = View.Details;
+            lv.FullRowSelect = true;
+            lv.GridLines = true;
+
+            lv.Items.Clear();
+            lv.Columns.Clear();
+
+            foreach (var column in columns)
+            {
+                lv.Columns.Add(column, 150);
+            }
+
+            // Автоматически подгоняем ширину столбцов по заголовкам
+            lv.AutoResizeColumns(ColumnHeaderAutoResizeStyle.HeaderSize);
+        }
+
+        // Чтение файла с использованием кодировки OEM 866
+        private string ReadFileWithOem866Encoding(string filePath)
+        {
+            return File.ReadAllText(filePath, Encoding.GetEncoding(866));
+        }
+
+        private List<string> ExtractIpsFromDnsResult(string result)
+        {
+            var ips = new List<string>();
+            var lines = result.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
+
+            foreach (var line in lines)
+            {
+                var ipMatch = Regex.Match(line, @"(\d{1,3}\.){3}\d{1,3}");
+                if (ipMatch.Success)
+                {
+                    string ip = ipMatch.Value;
+                    if (IsValidIpAddress(ip))
+                    {
+                        ips.Add(ip);
+                    }
+                }
+            }
+            return ips;
+        }
+
+        private bool IsValidIpAddress(string ip)
+        {
+            return IPAddress.TryParse(ip, out _);
+        }
+
+        private async Task<List<BanEntry>> LoadBanList()
+        {
+            string url = "https://raw.githubusercontent.com/bhd8626/banlist/main/IP_CHEAT";
+            using (HttpClient client = new HttpClient())
+            {
+                string data = await client.GetStringAsync(url);
+                var banList = ParseIpList(data);
+                UpdateBanListCount(banList.Count);
+                return banList;
+            }
+        }
+
+        private List<BanEntry> ParseIpList(string rawData)
+        {
+            var entries = new List<BanEntry>();
+            var ipLines = rawData.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
+
+            foreach (var line in ipLines)
+            {
+                if (string.IsNullOrWhiteSpace(line)) continue;
+                string entry = line.Trim();
+
+                // Разделяем IP и комментарий (если есть)
+                string ipPart = entry;
+                string name = entry;
+
+                if (entry.Contains("-"))
+                {
+                    var parts = entry.Split(new[] { '-' }, 2);
+                    ipPart = parts[0].Trim();
+                    name = entry; // Сохраняем полное имя с комментарием
+                }
+
+                if (ipPart.Contains(":"))
+                {
+                    // IP:Port
+                    if (IsValidIpPort(ipPart))
+                    {
+                        var banEntry = new BanEntry { Name = name, IpPorts = new List<string> { ipPart } };
+                        entries.Add(banEntry);
+                    }
+                }
+                else
+                {
+                    // Только IP
+                    if (IsValidIpAddress(ipPart))
+                    {
+                        var banEntry = new BanEntry { Name = name, IPs = new List<string> { ipPart } };
+                        entries.Add(banEntry);
+                    }
+                }
+            }
+            return entries;
+        }
+
+        private bool IsValidIpPort(string ipPort)
+        {
+            string[] parts = ipPort.Split(':');
+            if (parts.Length != 2) return false;
+
+            if (!IPAddress.TryParse(parts[0], out _)) return false;
+            if (!int.TryParse(parts[1], out int port) || port < 0 || port > 65535) return false;
+
+            return true;
+        }
+
+        private void UpdateBanListCount(int count)
+        {
+            if (label3.InvokeRequired)
+            {
+                label3.Invoke(new Action(() => label3.Text = $"База: {count} ед."));
+            }
+            else
+            {
+                label3.Text = $"База: {count} ед.";
+            }
+        }
+
+        private string ExecuteCommand(string command)
+        {
+            using (var process = new Process())
+            {
+                process.StartInfo.FileName = "cmd.exe";
+                process.StartInfo.Arguments = "/c " + command;
+                process.StartInfo.RedirectStandardOutput = true;
+                process.StartInfo.UseShellExecute = false;
+                process.StartInfo.CreateNoWindow = true;
+
+                process.Start();
+                string result = process.StandardOutput.ReadToEnd();
+                process.WaitForExit();
+                return result;
+            }
+        }
+
+        class BanEntry
+        {
+            public string Name { get; set; }
+            public List<string> IPs { get; set; } = new List<string>(); // Только IP
+            public List<string> IpPorts { get; set; } = new List<string>(); // IP:Port
+        }
+
+        [DllImport("iphlpapi.dll", SetLastError = true)]
+        private static extern int GetExtendedTcpTable(
+            IntPtr pTcpTable, ref int pdwSize, bool sort, int ipVersion,
+            TcpTableClass tblClass, int reserved);
+
+        private enum TcpTableClass
+        {
+            TCP_TABLE_BASIC_LISTENER,
+            TCP_TABLE_BASIC_CONNECTIONS,
+            TCP_TABLE_BASIC_ALL,
+            TCP_TABLE_OWNER_PID_LISTENER,
+            TCP_TABLE_OWNER_PID_CONNECTIONS,
+            TCP_TABLE_OWNER_PID_ALL
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct MibTcpRowOwnerPid
+        {
+            public uint state;
+            public uint localAddr;
+            public uint localPort;
+            public uint remoteAddr;
+            public uint remotePort;
+            public uint owningPid;
+        }
+
+        private string TranslateTcpState(uint state)
+        {
+            var tcpStates = new Dictionary<uint, string>
+        {
+            { 1, "Закрыто" },
+            { 2, "Слушает" },
+            { 3, "Синхронизация отправлена" },
+            { 4, "Синхронизация получена" },
+            { 5, "Установлено" },
+            { 6, "Закрывается" },
+            { 7, "Ожидание завершения 1" },
+            { 8, "Ожидание завершения 2" },
+            { 9, "Закрытие соединения" },
+            { 10, "Последний ACK" },
+            { 11, "Ожидание завершения" }
+        };
+
+            return tcpStates.TryGetValue(state, out string result) ? result : "Неизвестно";
+        }
+
+        private string GetProcessOwner(Process process)
+        {
+            try
+            {
+                using (var searcher = new ManagementObjectSearcher($"SELECT * FROM Win32_Process WHERE ProcessId = {process.Id}"))
+                {
+                    foreach (ManagementBaseObject baseObj in searcher.Get())
+                    {
+                        ManagementObject obj = (ManagementObject)baseObj; // Явное приведение типов
+                        object[] args = new object[2];
+                        int returnVal = Convert.ToInt32(obj.InvokeMethod("GetOwner", args));
+                        if (returnVal == 0)
+                        {
+                            return args[0]?.ToString() ?? "Неизвестно";
+                        }
+                    }
+                }
+            }
+            catch { }
+            return "Неизвестно";
+        }
+
+        private void button_Prefetch_Click(object sender, EventArgs e)
+        {
+            // Создаём новое окно
+            Form newForm = new Form();
+            newForm.Text = "Данные Prefetch";
+            newForm.Size = new Size(700, 400);
+
+            // Создаём ListView и настраиваем его
+            ListView listView = new ListView();
+            listView.Dock = DockStyle.Fill;
+            listView.View = View.Details;
+            listView.FullRowSelect = true;
+            listView.Columns.Add("Название", 150);
+            listView.Columns.Add("Путь", 300);
+            listView.Columns.Add("Дата", 150);
+            listView.Columns.Add("Вес (KB)", 100);
+            newForm.Controls.Add(listView);
+
+            // Заполняем ListView данными
+            string prefetchPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "Prefetch");
+            if (Directory.Exists(prefetchPath))
+            {
+                foreach (var file in Directory.GetFiles(prefetchPath, "*.pf"))
+                {
+                    FileInfo fileInfo = new FileInfo(file);
+                    ListViewItem item = new ListViewItem(fileInfo.Name);
+                    item.SubItems.Add(fileInfo.FullName);
+                    item.SubItems.Add(fileInfo.CreationTime.ToString());
+                    item.SubItems.Add((fileInfo.Length / 1024).ToString());
+                    listView.Items.Add(item);
+                }
+            }
+
+            // Отображаем окно
+            newForm.Show();
+        }
+
+        private void button_TempPath_Click(object sender, EventArgs e)
+        {
+            // Создаем окно для вывода информации
+            Form newForm = new Form();
+            newForm.Text = "Подозрительные временные файлы";
+            newForm.Size = new System.Drawing.Size(1000, 500);
+
+            // Создаем ListView
+            ListView listView = new ListView();
+            listView.Dock = DockStyle.Fill;
+            listView.View = View.Details;
+            listView.FullRowSelect = true;
+            listView.Columns.Add("Название", 150);
+            listView.Columns.Add("Путь", 300);
+            listView.Columns.Add("Дата", 150);
+            listView.Columns.Add("Вес (KB)", 100);
+            listView.Columns.Add("Приложение", 200);
+            listView.Columns.Add("Сетевой трафик", 150);
+            newForm.Controls.Add(listView);
+
+            // Регулярное выражение для GUID в начале имени файла
+            string guidPattern = @"^(\{?[0-9a-fA-F]{8}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{12}\}?-)";
+
+            // Получаем путь к временной папке
+            string tempPath = Path.GetTempPath();
+            foreach (var file in Directory.GetFiles(tempPath))
+            {
+                FileInfo fileInfo = new FileInfo(file);
+
+                // Если имя файла начинается с GUID, пропускаем его
+                if (Regex.IsMatch(fileInfo.Name, guidPattern))
+                    continue;
+
+                // Получаем имя приложения, создавшего файл
+                string appName = GetCreatingApplication(file);
+
+                // Фильтруем только неизвестные/подозрительные процессы
+                if (!IsLegitProcess(appName))
+                {
+                    // Проверяем, имело ли приложение сетевую активность
+                    bool hasNetwork = HasNetworkActivity(appName);
+
+                    ListViewItem item = new ListViewItem(fileInfo.Name);
+                    item.SubItems.Add(fileInfo.FullName);
+                    item.SubItems.Add(fileInfo.CreationTime.ToString());
+                    item.SubItems.Add((fileInfo.Length / 1024).ToString());
+                    item.SubItems.Add(appName);
+                    item.SubItems.Add(hasNetwork ? "Да" : "Нет");
+                    listView.Items.Add(item);
+                }
+            }
+
+            // Отображаем окно
+            newForm.Show();
+        }
+
+        /// <summary>
+        /// Определяет процесс, создавший файл, используя Sysmon (EventID 11).
+        /// </summary>
+        private string GetCreatingApplication(string filePath)
+        {
+            try
+            {
+                string escapedPath = EscapeXml(filePath);
+                string queryString = $@"
+                <QueryList>
+                  <Query Id='0' Path='Microsoft-Windows-Sysmon/Operational'>
+                    <Select Path='Microsoft-Windows-Sysmon/Operational'>
+                      *[System[(EventID=11)]]
+                      and
+                      *[EventData[Data[@Name='TargetFilename'] and (Data='{escapedPath}')]]
+                    </Select>
+                  </Query>
+                </QueryList>";
+
+                EventLogQuery eventsQuery = new EventLogQuery("Microsoft-Windows-Sysmon/Operational", PathType.LogName, queryString);
+                using (EventLogReader logReader = new EventLogReader(eventsQuery))
+                {
+                    for (EventRecord eventInstance = logReader.ReadEvent();
+                         eventInstance != null;
+                         eventInstance = logReader.ReadEvent())
+                    {
+                        if (eventInstance.Properties.Count > 5)
+                        {
+                            string image = eventInstance.Properties[4].Value.ToString();
+                            return image;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Ошибка при получении создающего приложения: " + ex.Message);
+            }
+            return "Unknown";
+        }
+
+        /// <summary>
+        /// Проверяет, был ли процесс замечен в сетевой активности (EventID 3 в Sysmon).
+        /// </summary>
+        private bool HasNetworkActivity(string appName)
+        {
+            try
+            {
+                string escapedAppName = EscapeXml(appName);
+                string queryString = $@"
+                <QueryList>
+                  <Query Id='0' Path='Microsoft-Windows-Sysmon/Operational'>
+                    <Select Path='Microsoft-Windows-Sysmon/Operational'>
+                      *[System[(EventID=3)]]
+                      and
+                      *[EventData[Data[@Name='Image'] and (Data='{escapedAppName}')]]
+                    </Select>
+                  </Query>
+                </QueryList>";
+
+                EventLogQuery eventsQuery = new EventLogQuery("Microsoft-Windows-Sysmon/Operational", PathType.LogName, queryString);
+                using (EventLogReader logReader = new EventLogReader(eventsQuery))
+                {
+                    EventRecord eventRecord = logReader.ReadEvent();
+                    if (eventRecord != null)
+                    {
+                        return true;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Ошибка при проверке сетевой активности: " + ex.Message);
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// Проверяет, является ли процесс легитимным (например, часть Windows или Microsoft Office).
+        /// </summary>
+        private bool IsLegitProcess(string appName)
+        {
+            string[] legitProcesses =
+            {
+            "explorer.exe",
+            "winword.exe",
+            "excel.exe",
+            "chrome.exe",
+            "firefox.exe",
+            "teams.exe",
+            "msedge.exe",
+            "powershell.exe",
+            "cmd.exe",
+            "outlook.exe",
+            "svchost.exe",
+            "yandex.exe"
+        };
+
+            return legitProcesses.Any(legit => appName.IndexOf(legit, StringComparison.OrdinalIgnoreCase) >= 0);
+        }
+
+        /// <summary>
+        /// Экранирует строку для использования в XML-запросе.
+        /// </summary>
+        private string EscapeXml(string s)
+        {
+            return SecurityElement.Escape(s);
+        }
+
+        private void ButtonNetworkInformation_Click(object sender, EventArgs e)
+        {
+            //  статистика сетевых интерфейсов
+            string networkUsage = GetNetworkUsage();
+
+            // окно для отображения статистики
+            Form usageForm = new Form
+            {
+                Text = "Использование данных",
+                Width = 800,
+                Height = 600
+            };
+
+            // элемент TextBox для отображения статистики
+            TextBox usageTextBox = new TextBox
+            {
+                Multiline = true,
+                Dock = DockStyle.Fill,
+                ScrollBars = ScrollBars.Vertical,
+                Text = networkUsage
+            };
+
+            usageForm.Controls.Add(usageTextBox);
+
+            usageForm.ShowDialog();
+
+        }
+
+        private string GetNetworkUsage()
+        {
+            StringBuilder usage = new StringBuilder();
+            ProcessStartInfo psi = new ProcessStartInfo("netstat", "-ano")
+            {
+                RedirectStandardOutput = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+
+            using (Process netstatProcess = Process.Start(psi))
+            {
+                using (System.IO.StreamReader reader = netstatProcess.StandardOutput)
+                {
+                    string result = reader.ReadToEnd();
+                    string[] lines = result.Split(new[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries);
+
+                    var connections = lines
+                        .Skip(4) // Пропускаем заголовки
+                        .Select(line => line.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries))
+                        .Where(parts => parts.Length >= 5)
+                        .Select(parts => new
+                        {
+                            Proto = parts[0],
+                            LocalAddress = parts[1],
+                            ForeignAddress = parts[2],
+                            State = parts[3],
+                            PID = parts[4]
+                        });
+
+                    foreach (var connection in connections)
+                    {
+                        int pid = int.Parse(connection.PID);
+                        string processName = "Unknown";
+                        try
+                        {
+                            processName = Process.GetProcessById(pid).ProcessName;
+                        }
+                        catch { }
+
+                        //usage.AppendLine($"Proto: {connection.Proto}");
+                        usage.AppendLine($"Local Address: {connection.LocalAddress}");
+                        usage.AppendLine($"Foreign Address: {connection.ForeignAddress}");
+                        usage.AppendLine($"State: {connection.State}");
+                        usage.AppendLine($"PID: {connection.PID}");
+                        usage.AppendLine($"Process: {processName}");
+                        usage.AppendLine(new string('-', 80));
+                    }
+                }
+            }
+
+            return usage.ToString();
+        }
+
+        private void buttonLogs_Click(object sender, EventArgs e)
+        {
+            // Получаем логи из журнала приложений
+            string logs = GetApplicationLogs();
+
+            // Создаем новое окно для отображения логов
+            Form logsForm = new Form
+            {
+                Text = "Лог Приложений",
+                Width = 800,
+                Height = 600
+            };
+
+            // Создаем элемент TextBox для отображения логов
+            TextBox logsTextBox = new TextBox
+            {
+                Multiline = true,
+                Dock = DockStyle.Fill,
+                ScrollBars = ScrollBars.Vertical,
+                Font = new Font("Microsoft Sans Serif", 12), // Увеличение шрифта
+                Text = logs
+            };
+
+            // Добавляем TextBox в форму
+            logsForm.Controls.Add(logsTextBox);
+
+            // Отображаем окно
+            logsForm.ShowDialog();
+        }
+
+        private string GetApplicationLogs()
+        {
+            StringBuilder logs = new StringBuilder();
+            EventLog eventLog = new EventLog("Application");
+
+            // Сортируем записи по дате в убывающем порядке
+            var sortedEntries = eventLog.Entries.Cast<EventLogEntry>()
+                                    .OrderByDescending(entry => entry.TimeGenerated);
+
+            foreach (EventLogEntry entry in sortedEntries)
+            {
+                logs.AppendLine($"Time: {entry.TimeGenerated}");
+                logs.AppendLine($"Source: {entry.Source}");
+                logs.AppendLine($"Type: {entry.EntryType}");
+                logs.AppendLine($"Message: {entry.Message}");
+                logs.AppendLine(new string('-', 80));
+            }
+
+            return logs.ToString();
+        }
+
+        private async void buttonMFT_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                // Получаем данные из MFT асинхронно
+                string mftInfo = await Task.Run(() => GetMFTInfo());
+
+                // Создаем и отображаем окно с информацией
+                ShowMFTInfoWindow(mftInfo);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private string GetMFTInfo()
+        {
+            StringBuilder mftInfo = new StringBuilder();
+            int maxDepth = 2; // Максимальная глубина рекурсии
+            var fileList = new List<FileInfo>();
+
+            try
+            {
+                // Получаем все доступные диски
+                var drives = DriveInfo.GetDrives();
+
+                foreach (var drive in drives)
+                {
+                    if (drive.IsReady && drive.DriveType == DriveType.Fixed)
+                    {
+                        mftInfo.AppendLine($"Обрабатывается диск: {drive.Name}");
+                        CollectFilesAndSubdirectories(drive.RootDirectory.FullName, fileList, maxDepth);
+                    }
+                }
+
+                // Сортировка файлов по дате создания от нового к старому
+                var sortedFiles = fileList.OrderByDescending(fi => fi.CreationTime).ToList();
+
+                foreach (var fileInfo in sortedFiles)
+                {
+                    mftInfo.AppendLine($"Файл: {fileInfo.FullName}");
+                    mftInfo.AppendLine($"Дата создания: {fileInfo.CreationTime}");
+                    mftInfo.AppendLine($"Дата последнего изменения: {fileInfo.LastWriteTime}");
+                    mftInfo.AppendLine($"Дата последнего доступа: {fileInfo.LastAccessTime}");
+                    mftInfo.AppendLine(new string('-', 80));
+                }
+            }
+            catch (Exception ex)
+            {
+                mftInfo.AppendLine("Ошибка: " + ex.Message);
+            }
+
+            return mftInfo.ToString();
+        }
+
+        private void CollectFilesAndSubdirectories(string path, List<FileInfo> fileList, int maxDepth)
+        {
+            var stack = new Stack<(string Path, int Depth)>();
+            stack.Push((path, 0));
+
+            while (stack.Count > 0)
+            {
+                var (currentPath, currentDepth) = stack.Pop();
+
+                if (currentDepth > maxDepth)
+                    continue;
+
+                try
+                {
+                    foreach (var file in Directory.GetFiles(currentPath))
+                    {
+                        try
+                        {
+                            fileList.Add(new FileInfo(file));
+                        }
+                        catch (UnauthorizedAccessException)
+                        {
+                            LogError($"Ошибка доступа к файлу: {file}");
+                        }
+                        catch (Exception ex)
+                        {
+                            LogError($"Ошибка при обработке файла {file}: {ex.Message}");
+                        }
+                    }
+
+                    foreach (var directory in Directory.GetDirectories(currentPath))
+                    {
+                        try
+                        {
+                            stack.Push((directory, currentDepth + 1));
+                        }
+                        catch (UnauthorizedAccessException)
+                        {
+                            LogError($"Ошибка доступа к директории: {directory}");
+                        }
+                        catch (Exception ex)
+                        {
+                            LogError($"Ошибка при обработке директории {directory}: {ex.Message}");
+                        }
+                    }
+                }
+                catch (UnauthorizedAccessException)
+                {
+                    LogError($"Ошибка доступа к директории: {currentPath}");
+                }
+                catch (Exception ex)
+                {
+                    LogError($"Ошибка при обработке директории {currentPath}: {ex.Message}");
+                }
+            }
+        }
+
+        private void ShowMFTInfoWindow(string mftInfo)
+        {
+            Form mftForm = new Form
+            {
+                Text = "Master File Table",
+                Width = 800,
+                Height = 600
+            };
+
+            TextBox mftTextBox = new TextBox
+            {
+                Multiline = true,
+                Dock = DockStyle.Fill,
+                ScrollBars = ScrollBars.Vertical,
+                Font = new Font("Microsoft Sans Serif", 12),
+                Text = mftInfo,
+                ReadOnly = true
+            };
+
+            mftForm.Controls.Add(mftTextBox);
+            mftForm.Show(); // Используем Show вместо ShowDialog
+        }
+
+        private void LogError(string message)
+        {
+            try
+            {
+                using (StreamWriter writer = new StreamWriter("error_log.txt", true))
+                {
+                    writer.WriteLine($"{DateTime.Now}: {message}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Ошибка при записи в лог: {ex.Message}");
+            }
+        }
+
+        private async void buttonErrorLog_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                // Получаем логи асинхронно
+                string logs = await GetErrorLogsAsync();
+
+                // Создаем и отображаем окно с логами
+                ShowLogsWindow(logs);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка при получении логов: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private async Task<string> GetErrorLogsAsync()
+        {
+            return await Task.Run(() =>
+            {
+                StringBuilder logs = new StringBuilder();
+
+                using (EventLog eventLog = new EventLog("Application"))
+                {
+                    var sortedEntries = eventLog.Entries.Cast<EventLogEntry>()
+                        .Where(entry => entry.EntryType == EventLogEntryType.Error)
+                        .Where(entry => !IsExcludedSource(entry)) // Исключаем записи из определенных источников
+                        .OrderByDescending(entry => entry.TimeGenerated);
+
+                    foreach (EventLogEntry entry in sortedEntries)
+                    {
+                        logs.AppendLine($"Time: {entry.TimeGenerated}");
+                        logs.AppendLine($"Source: {entry.Source}");
+                        logs.AppendLine($"Type: {entry.EntryType}");
+                        logs.AppendLine($"Message: {entry.Message}");
+                        logs.AppendLine(new string('-', 80));
+                    }
+                }
+
+                return logs.ToString();
+            });
+        }
+
+        private bool IsExcludedSource(EventLogEntry entry)
+        {
+            // Исключаем ошибки из папки "Program Files"
+            if (entry.Source.IndexOf("Program Files", StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                return true;
+            }
+
+            // Исключаем ошибки от службы "OutlineService"
+            if (entry.Source.Equals("OutlineService", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            // Исключаем ошибки, в сообщении которых упоминается "Program Files" или "OutlineService"
+            if (entry.Message.IndexOf("Program Files", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                entry.Message.IndexOf("OutlineService", StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                return true;
+            }
+
+            return false;
+        }
+
+        private void ShowLogsWindow(string logs)
+        {
+            Form logsForm = new Form
+            {
+                Text = "Лог ошибок",
+                Width = 800,
+                Height = 600
+            };
+
+            TextBox logsTextBox = new TextBox
+            {
+                Multiline = true,
+                Dock = DockStyle.Fill,
+                ScrollBars = ScrollBars.Vertical,
+                Font = new Font("Microsoft Sans Serif", 12),
+                Text = logs,
+                ReadOnly = true // Запрещаем редактирование логов
+            };
+
+            logsForm.Controls.Add(logsTextBox);
+            logsForm.ShowDialog();
+        }
+
+        private void buttonPrefetchFiles_Click(object sender, EventArgs e)
+        {
+            // Получаем информацию о файлах Prefetch
+            string prefetchFilesInfo = GetPrefetchFilesInfo();
+
+            // Создаем новое окно для отображения информации о Prefetch файлах
+            Form prefetchFilesForm = new Form
+            {
+                Text = "Prefetch файлы",
+                Width = 800,
+                Height = 600
+            };
+
+            // Создаем элемент TextBox для отображения информации
+            TextBox prefetchFilesTextBox = new TextBox
+            {
+                Multiline = true,
+                Dock = DockStyle.Fill,
+                ScrollBars = ScrollBars.Vertical,
+                Font = new Font("Microsoft Sans Serif", 12), // Увеличение шрифта
+                Text = prefetchFilesInfo
+            };
+
+            // Добавляем TextBox в форму
+            prefetchFilesForm.Controls.Add(prefetchFilesTextBox);
+
+            // Отображаем окно
+            prefetchFilesForm.ShowDialog();
+        }
+
+        private string GetPrefetchFilesInfo()
+        {
+            StringBuilder prefetchFilesInfo = new StringBuilder();
+            string prefetchDirectory = @"C:\Windows\Prefetch";
+
+            // Проверяем существует ли директория Prefetch
+            if (Directory.Exists(prefetchDirectory))
+            {
+                // Получаем все файлы в директории
+                var files = new DirectoryInfo(prefetchDirectory).GetFiles()
+                    .OrderByDescending(file => file.LastWriteTime); // Сортировка по дате изменения
+
+                foreach (var file in files)
+                {
+                    prefetchFilesInfo.AppendLine($"Имя файла: {file.Name}");
+                    prefetchFilesInfo.AppendLine($"Путь: {file.FullName}");
+                    prefetchFilesInfo.AppendLine($"Дата последнего изменения: {file.LastWriteTime}");
+                    prefetchFilesInfo.AppendLine($"Размер: {file.Length} байт");
+                    prefetchFilesInfo.AppendLine(new string('-', 80));
+                }
+            }
+            else
+            {
+                prefetchFilesInfo.AppendLine("Директория Prefetch не найдена.");
+            }
+
+            return prefetchFilesInfo.ToString();
+        }
+
+        // Информация о запущенных приложениях
+
+        private void CheckThree_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                string pcaPath = @"C:\Windows\appcompat\pca";
+                string appLaunchFile = Path.Combine(pcaPath, "PcaAppLaunchDic.txt");
+
+                // Проверяем существование файла
+                if (!File.Exists(appLaunchFile))
+                {
+                    MessageBox.Show("Файл не найден - возможно не включен по умолчание", "Информация",
+                                   MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+
+                // Проверяем размер файла
+                FileInfo fileInfo = new FileInfo(appLaunchFile);
+                if (fileInfo.Length == 0)
+                {
+                    MessageBox.Show("Файл пуст - возможно чистка, не факт", "Информация",
+                                   MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+
+                // Читаем и парсим файл
+                List<string> applications = ParseAppLaunchFile(appLaunchFile);
+
+                // Если нет записей
+                if (applications.Count == 0)
+                {
+                    MessageBox.Show("В файле нет корректных записей - возможно софт", "Информация",
+                                   MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+
+                // Сортируем по дате
+                var sortedApplications = applications
+                    .OrderBy(app =>
+                    {
+                        if (app.Contains(" - "))
+                        {
+                            string datePart = app.Split(new[] { " - " }, StringSplitOptions.None)[0];
+                            if (DateTime.TryParse(datePart, out DateTime date))
+                                return date;
+                        }
+                        return DateTime.MaxValue;
+                    })
+                    .ToList();
+
+                // Показываем информацию
+                ShowAppLaunchInfo(sortedApplications);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка при чтении файла: {ex.Message}", "Ошибка",
+                               MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private List<string> ParseAppLaunchFile(string filePath)
+        {
+            List<string> applications = new List<string>();
+
+            try
+            {
+                // Читаем файл с правильной кодировкой
+                string[] lines = File.ReadAllLines(filePath, Encoding.GetEncoding(1251));
+
+                foreach (string line in lines)
+                {
+                    if (string.IsNullOrWhiteSpace(line) || line == "E:\\Famaly\\Desktop\\")
+                        continue;
+
+                    string[] parts = line.Split('|');
+                    if (parts.Length >= 2)
+                    {
+                        string filePathValue = parts[0].Trim();
+                        string dateTime = parts[1].Trim();
+
+                        if (DateTime.TryParse(dateTime, out DateTime parsedDate))
+                        {
+                            string appName = Path.GetFileNameWithoutExtension(filePathValue);
+
+                            if (string.IsNullOrEmpty(appName))
+                            {
+                                appName = filePathValue;
+                            }
+
+                            applications.Add($"{dateTime} - {appName} [{filePathValue}]");
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка при чтении файла: {ex.Message}",
+                               "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+
+            return applications;
+        }
+
+        private void ShowAppLaunchInfo(List<string> applications)
+        {
+            Form infoForm = new Form();
+            infoForm.Text = "Лог PcaAppLaunchDic";
+            infoForm.Size = new Size(1000, 600);
+            infoForm.StartPosition = FormStartPosition.CenterScreen;
+
+            // Создаем ListBox для отображения
+            ListBox listBox = new ListBox();
+            listBox.Dock = DockStyle.Fill;
+            listBox.Font = new Font("Consolas", 9);
+            listBox.HorizontalScrollbar = true;
+
+            // Устанавливаем горизонтальную прокрутку
+            int maxWidth = 0;
+            using (Graphics g = listBox.CreateGraphics())
+            {
+                foreach (var app in applications)
+                {
+                    int width = (int)g.MeasureString(app, listBox.Font).Width;
+                    if (width > maxWidth) maxWidth = width;
+                }
+            }
+
+            listBox.HorizontalExtent = maxWidth + 20;
+
+            // Заполняем ListBox
+            foreach (var app in applications)
+            {
+                listBox.Items.Add(app);
+            }
+
+            // Панель с информацией
+            Panel infoPanel = new Panel();
+            infoPanel.Dock = DockStyle.Top;
+            infoPanel.Height = 30;
+            infoPanel.BackColor = SystemColors.Control;
+
+            Label countLabel = new Label();
+            countLabel.Text = $"Найдено записей: {applications.Count}";
+            countLabel.Location = new Point(10, 5);
+            countLabel.AutoSize = true;
+
+            infoPanel.Controls.Add(countLabel);
+
+            infoForm.Controls.Add(infoPanel);
+            infoForm.Controls.Add(listBox);
+            infoForm.ShowDialog();
+        }
+
+        private void CheckFour_Click(object sender, EventArgs e)
+        {
+            string filePath = @"C:\Windows\appcompat\pca\PcaGeneralDb0.txt";
+
+            if (!File.Exists(filePath))
+            {
+                MessageBox.Show("Файл не найден - возможно выключен по умолчанию", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            // Создаем новое окно
+            Form infoForm = new Form();
+            infoForm.Text = "Информация логов PcaGeneral";
+            infoForm.Size = new Size(1400, 600);
+            infoForm.StartPosition = FormStartPosition.CenterScreen;
+
+            // Создаем DataGridView
+            DataGridView dataGridView = new DataGridView();
+            dataGridView.Dock = DockStyle.Fill;
+            dataGridView.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+            dataGridView.ReadOnly = true;
+            dataGridView.AllowUserToAddRows = false;
+            dataGridView.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+
+            // Добавляем колонки
+            dataGridView.Columns.Add("Date", "Дата и Время");
+            dataGridView.Columns.Add("Application", "Приложение");
+            dataGridView.Columns.Add("Path", "Полный Путь");
+            dataGridView.Columns.Add("Message", "Сообщение");
+
+            // Настраиваем ширину
+            dataGridView.Columns["Date"].FillWeight = 20;        
+            dataGridView.Columns["Application"].FillWeight = 20; 
+            dataGridView.Columns["Path"].FillWeight = 45;        
+            dataGridView.Columns["Message"].FillWeight = 5;     
+
+            try
+            {
+                int lineCount = 0;
+                int processedCount = 0;
+
+                // Читаем файл как UTF-16
+                var lines = File.ReadAllLines(filePath, Encoding.Unicode);
+
+                foreach (var line in lines)
+                {
+                    lineCount++;
+                    if (string.IsNullOrWhiteSpace(line))
+                        continue;
+
+                    string trimmedLine = line.Trim();
+                    if (trimmedLine.Length < 10)
+                        continue;
+
+                    // Проверяем формат даты (YYYY-MM-DD)
+                    bool isDateLine = trimmedLine.Length >= 10 &&
+                                      trimmedLine[4] == '-' &&
+                                      trimmedLine[7] == '-' &&
+                                      char.IsDigit(trimmedLine[0]) &&
+                                      char.IsDigit(trimmedLine[1]) &&
+                                      char.IsDigit(trimmedLine[2]) &&
+                                      char.IsDigit(trimmedLine[3]);
+
+                    if (!isDateLine)
+                        continue;
+
+                    try
+                    {
+                        var parts = trimmedLine.Split('|');
+                        if (parts.Length >= 3)
+                        {
+                            string dateTime = parts[0].Trim();
+                            if (dateTime.Length > 19)
+                                dateTime = dateTime.Substring(0, 19);
+
+                            string fullPath = parts[2].Trim();
+                            string application = ExtractFileNameManually(fullPath);
+                            string message = parts.Length > 7 ? parts[7].Trim() : string.Empty;
+
+                            dataGridView.Rows.Add(dateTime, application, fullPath, message);
+                            processedCount++;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Ошибка обработки строки {lineCount}: {ex.Message}");
+                    }
+
+                    // Ограничиваем для скорости
+                    if (processedCount > 2000) break;
+                }
+
+                infoForm.Text = $"Информация из PCA лога ({processedCount} записей из {lineCount} строк)";
+
+                if (processedCount == 0)
+                {
+                    MessageBox.Show("Не удалось обработать ни одной записи. Проверьте формат файла.",
+                                    "Информация", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка чтения файла - возможно выключен по умолчанию: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                infoForm.Dispose();
+                return;
+            }
+
+            // Обработчик двойного клика
+            dataGridView.CellDoubleClick += (s, ev) =>
+            {
+                if (ev.RowIndex >= 0)
+                {
+                    string fullPath = dataGridView.Rows[ev.RowIndex].Cells["Path"].Value?.ToString();
+                    if (!string.IsNullOrEmpty(fullPath) && File.Exists(fullPath))
+                    {
+                        try
+                        {
+                            // Открыть Проводник и выделить файл
+                            System.Diagnostics.Process.Start("explorer.exe", $"/select,\"{fullPath}\"");
+                        }
+                        catch (Exception ex)
+                        {
+                            MessageBox.Show($"Ошибка при открытии Проводника: {ex.Message}",
+                                            "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        }
+                    }
+                    else if (!string.IsNullOrEmpty(fullPath))
+                    {
+                        // Если файла уже нет, открываем только папку
+                        string directory = Path.GetDirectoryName(fullPath);
+                        if (!string.IsNullOrEmpty(directory) && Directory.Exists(directory))
+                        {
+                            System.Diagnostics.Process.Start("explorer.exe", directory);
+                        }
+                    }
+                }
+            };
+
+            // Добавляем DataGridView
+            infoForm.Controls.Add(dataGridView);
+
+            // Показываем окно
+            infoForm.Show();
+        }
+
+        // Ручное извлечение имени файла из пути
+        private string ExtractFileNameManually(string fullPath)
+        {
+            if (string.IsNullOrEmpty(fullPath))
+                return string.Empty;
+
+            int lastSlashIndex = Math.Max(
+                fullPath.LastIndexOf('\\'),
+                fullPath.LastIndexOf('/')
+            );
+
+            if (lastSlashIndex == -1)
+                return fullPath;
+
+            if (lastSlashIndex >= fullPath.Length - 1)
+                return string.Empty;
+
+            return fullPath.Substring(lastSlashIndex + 1);
+        }
+
+    }
+
+}
+
